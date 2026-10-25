@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.2
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-toml
+      # Raw data must never reach Git; this catches a parquet slipping past .gitignore.
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+  - repo: local
+    hooks:
+      # Second line of defence behind .gitignore: refuse to commit the secrets file.
+      - id: block-env-file
+        name: block .env
+        entry: .env holds API keys and must never be committed
+        language: fail
+        files: '(^|/)\.env$'

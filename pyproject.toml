@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nordic-bess-revenue"
+version = "0.1.0"
+description = "Where a 1 MW / 1 MWh battery in Finland earns its money: FCR and day-ahead revenue benchmark."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=15",
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+# Kept separate so the pipeline installs and runs before the ENTSO-E key arrives (phase 8).
+entsoe = ["entsoe-py>=0.6"]
+dev = [
+    "pytest>=8",
+    "ruff==0.17.2",  # pinned to the pre-commit rev so local, hook and CI formatting agree
+    "mypy>=1.10",
+    "pandas-stubs>=2.2",
+    "types-requests>=2.31",
+    "pre-commit>=3.7",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F: errors, I: import order, UP: modern syntax, B: likely bugs, D: docstrings (every function needs one).
+select = ["E", "F", "I", "UP", "B", "D"]
+ignore = ["D203", "D213"]  # pick one docstring style; these two conflict with D211/D212
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]  # test names describe themselves
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

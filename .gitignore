@@ -1,0 +1,27 @@
+# Secrets: API keys live only in .env (never commit)
+.env
+
+# Data layers rebuilt by the pipeline (Bronze/Silver); only data/output/ is committed
+data/raw/
+data/clean/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
