@@ -9,20 +9,20 @@ from functools import partial
 
 import pandas as pd
 
-from nordic_bess import config, transform, validate
+from nordic_bess import config, revenue, transform, validate
 from nordic_bess.sources import fingrid
 
 log = logging.getLogger(__name__)
 
 
 def extract(refresh: bool) -> None:
-    """Download raw Fingrid data for the configured period (skips months already on disk)."""
-    fingrid.download(list(config.FINGRID_DATASETS), config.PERIOD_START, config.PERIOD_END, refresh)
+    """Download raw Fingrid data for the trend period (skips months already on disk)."""
+    fingrid.download(list(config.FINGRID_DATASETS), config.TREND_START, config.PERIOD_END, refresh)
 
 
 def validate_raw() -> dict[str, list[validate.CheckResult]]:
     """Validate every raw dataset, log a summary, and raise if any critical check failed."""
-    start_utc = pd.Timestamp(config.PERIOD_START, tz="UTC")
+    start_utc = pd.Timestamp(config.TREND_START, tz="UTC")
     # PERIOD_END is an inclusive date, so the exclusive bound is the following midnight.
     end_utc = pd.Timestamp(config.PERIOD_END + timedelta(days=1), tz="UTC")
     report = {}
@@ -70,6 +70,26 @@ def transform_raw() -> pd.DataFrame:
     return prices
 
 
+def compute_revenue() -> pd.DataFrame:
+    """Build data/clean/revenue_daily.parquet: EUR per market day for each strategy."""
+    wide = revenue.to_wide(pd.read_parquet(config.DATA_CLEAN / "prices.parquet"))
+    hourly = pd.concat(
+        [
+            revenue.fcr_n_only(wide, config.FCR_N_BID_MW),
+            revenue.fcr_d_stacked(wide, config.FCR_D_BID_MW),
+        ],
+        axis=1,
+    )
+    log.info("day-ahead prices not loaded yet (phase 8): arbitrage strategy skipped")
+    # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.
+    days = revenue.best_of(revenue.daily(hourly, config.MARKET_TZ) * config.AVAILABILITY)
+    days.to_parquet(config.DATA_CLEAN / "revenue_daily.parquet")
+    headline = days.loc[str(config.PERIOD_START) : str(config.PERIOD_END)]
+    for strategy, eur in revenue.annualised(headline, config.POWER_MW).items():
+        log.info("headline %-14s %10.0f EUR/MW/year", strategy, eur)
+    return days
+
+
 def main() -> None:
     """Parse arguments and run each pipeline step with timing."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -81,6 +101,7 @@ def main() -> None:
         ("extract", partial(extract, args.refresh)),
         ("validate", validate_raw),
         ("transform", transform_raw),
+        ("revenue", compute_revenue),
     ]
     for step_name, step in steps:
         t0 = time.perf_counter()

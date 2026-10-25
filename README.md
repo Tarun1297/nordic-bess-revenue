@@ -48,8 +48,10 @@ The model allows one cycle per day, and the charge hour must come before the dis
 
 The same 1 MW can't be sold twice. If it's promised to FCR-N for an hour, it can't also be used to trade energy in that hour. So the project compares strategies:
 
-1. **FCR-N only:** offer 1 MW to FCR-N every hour.
-2. **FCR-D up + down:** offer 1 MW to both FCR-D products at once. A battery can respond in both directions, because discharging covers *up* and charging covers *down*. *Assumption, to be confirmed against Fingrid's market rules.*
+1. **FCR-N only:** offer **0.5 MW** to FCR-N every hour. FCR-N needs 1 hour of energy kept free in *each* direction per MW, so a 1 MWh battery can back only 0.5 MW.
+2. **FCR-D up + down:** offer **0.833 MW** to both FCR-D products at once. Fingrid allows this stacking, and each direction then needs its own MW plus 20% kept free in the other direction, so 1.2 × 0.833 = 1 MW of power.
+
+Both bid sizes come from Table 10 of the [Nordic FCR Technical Requirements](https://www.fingrid.fi/globalassets/dokumentit/fi/sahkomarkkinat/reservit/technical-requirements-for-frequency-containment-reserve-provision-in-the-nordic-synchronous-area_14.5.2025.pdf) (valid in Finland from 14.5.2025) and Fingrid's report [Batteries in the Nordic reserve markets](https://www.fingrid.fi/globalassets/dokumentit/fi/sahkomarkkinat/reservit/batteries-in-the-nordic-reserve-markets-april-2025.pdf) (April 2025).
 3. **Day-ahead arbitrage:** one charge/discharge cycle per day.
 4. **Daily best-of:** for each day, pick whichever strategy earned most. This is an **upper bound**, because it assumes the battery knew all prices in advance.
 
@@ -59,6 +61,6 @@ These numbers show where the money *is* in the market, not what a real project w
 
 - **No perfect foresight.** Bids are placed before prices are known, so a real operator won't always pick the best product.
 - **Not available 100% of the time.** Maintenance and outages take hours away.
-- **Energy limits.** A 1 MWh battery can't hold 1 MW of reserve indefinitely in one direction. Fingrid's technical requirements make battery owners keep charge headroom, so the bid is usually below nameplate.
+- **Today's rules applied to earlier years.** The bid limits above are from the May 2025 requirements. The 2022–2025 trend uses the same limits so the years compare like for like, although the rules were different then.
 - **Wear, fees and activation energy.** Degradation, grid and market fees, and settlement of energy actually delivered during activations are not modelled.
 - **Hourly-market prices.** Fingrid also procures FCR through a yearly market. This project uses the hourly-market price only.
