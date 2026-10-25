@@ -5,7 +5,25 @@ import logging
 import numpy as np
 import pandas as pd
 
+from nordic_bess import config
+
 log = logging.getLogger(__name__)
+
+
+def max_fcr_bids(power_mw: float, energy_mwh: float) -> tuple[float, float]:
+    """Largest compliant (FCR-N, stacked FCR-D per direction) bids in MW, per Table 10.
+
+    FCR-N needs FCR_N_POWER_PER_MW of power and FCR_N_ENERGY_H of energy in *both* directions
+    per MW. Stacked FCR-D up + down needs, in each direction, 1 MW for its own product plus
+    FCR_D_OPPOSITE_POWER_SHARE for the other, and FCR_D_ENERGY_H of energy each way.
+    The binding limit (power or energy) sets the bid.
+    """
+    fcr_n = min(power_mw / config.FCR_N_POWER_PER_MW, energy_mwh / (2 * config.FCR_N_ENERGY_H))
+    fcr_d = min(
+        power_mw / (1 + config.FCR_D_OPPOSITE_POWER_SHARE),
+        energy_mwh / (2 * config.FCR_D_ENERGY_H),
+    )
+    return fcr_n, fcr_d
 
 
 def to_wide(prices: pd.DataFrame) -> pd.DataFrame:

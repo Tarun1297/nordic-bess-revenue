@@ -1,6 +1,5 @@
 """Fingrid open data client: downloads datasets in monthly chunks to data/raw/ (Bronze layer)."""
 
-import argparse
 import logging
 import os
 import time
@@ -155,16 +154,3 @@ def download(
             log.info("wrote %s (%d rows)", path.name, len(df))
             written.append(path)
     return written
-
-
-def main() -> None:
-    """CLI entry point: download all configured Fingrid datasets for the configured period."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--refresh", action="store_true", help="re-download existing months")
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    download(list(config.FINGRID_DATASETS), config.PERIOD_START, config.PERIOD_END, args.refresh)
-
-
-if __name__ == "__main__":
-    main()

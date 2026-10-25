@@ -1,11 +1,13 @@
-"""CLI that runs the pipeline end to end; each step is a function so the CLI stays thin."""
+"""CLI that runs the pipeline end to end; inputs come from params.toml, steps stay thin."""
 
 import argparse
+import dataclasses
 import logging
 import time
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import date, timedelta
 from functools import partial
+from pathlib import Path
 
 import pandas as pd
 
@@ -15,19 +17,24 @@ from nordic_bess.sources import fingrid
 log = logging.getLogger(__name__)
 
 
-def extract(refresh: bool) -> None:
+def extract(params: config.Params, refresh: bool) -> None:
     """Download raw Fingrid data for the trend period (skips months already on disk)."""
-    fingrid.download(list(config.FINGRID_DATASETS), config.TREND_START, config.PERIOD_END, refresh)
+    fingrid.download(list(config.FINGRID_DATASETS), params.trend_start, params.end, refresh)
 
 
-def validate_raw() -> dict[str, list[validate.CheckResult]]:
+def validate_raw(params: config.Params) -> dict[str, list[validate.CheckResult]]:
     """Validate every raw dataset, log a summary, and raise if any critical check failed."""
-    start_utc = pd.Timestamp(config.TREND_START, tz="UTC")
-    # PERIOD_END is an inclusive date, so the exclusive bound is the following midnight.
-    end_utc = pd.Timestamp(config.PERIOD_END + timedelta(days=1), tz="UTC")
+    start_utc = pd.Timestamp(params.trend_start, tz="UTC")
+    # The end date is inclusive, so the exclusive bound is the following midnight.
+    end_utc = pd.Timestamp(params.end + timedelta(days=1), tz="UTC")
     report = {}
     for dataset_id, name in config.FINGRID_DATASETS.items():
-        results = validate.run_checks(fingrid.load_raw(dataset_id), start_utc, end_utc)
+        raw = fingrid.load_raw(dataset_id)
+        # Raw files may hold more months than this run asks for; check only the requested span.
+        starts = pd.to_datetime(raw["startTime"], utc=True, format="ISO8601")
+        results = validate.run_checks(
+            raw[(starts >= start_utc) & (starts < end_utc)], start_utc, end_utc
+        )
         report[name] = results
         for r in results:
             level = logging.INFO if r.passed else logging.WARNING
@@ -70,38 +77,49 @@ def transform_raw() -> pd.DataFrame:
     return prices
 
 
-def compute_revenue() -> pd.DataFrame:
+def compute_revenue(params: config.Params) -> pd.DataFrame:
     """Build data/clean/revenue_daily.parquet: EUR per market day for each strategy."""
+    fcr_n_mw, fcr_d_mw = revenue.max_fcr_bids(params.power_mw, params.energy_mwh)
+    log.info("compliant bids: FCR-N %.3f MW, FCR-D up+down %.3f MW each", fcr_n_mw, fcr_d_mw)
     wide = revenue.to_wide(pd.read_parquet(config.DATA_CLEAN / "prices.parquet"))
     hourly = pd.concat(
-        [
-            revenue.fcr_n_only(wide, config.FCR_N_BID_MW),
-            revenue.fcr_d_stacked(wide, config.FCR_D_BID_MW),
-        ],
-        axis=1,
+        [revenue.fcr_n_only(wide, fcr_n_mw), revenue.fcr_d_stacked(wide, fcr_d_mw)], axis=1
     )
     log.info("day-ahead prices not loaded yet (phase 8): arbitrage strategy skipped")
     # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.
-    days = revenue.best_of(revenue.daily(hourly, config.MARKET_TZ) * config.AVAILABILITY)
+    days = revenue.best_of(revenue.daily(hourly, config.MARKET_TZ) * params.availability)
+    days = days.loc[str(params.trend_start) : str(params.end)]
     days.to_parquet(config.DATA_CLEAN / "revenue_daily.parquet")
-    headline = days.loc[str(config.PERIOD_START) : str(config.PERIOD_END)]
-    for strategy, eur in revenue.annualised(headline, config.POWER_MW).items():
+    headline = days.loc[str(params.start) : str(params.end)]
+    for strategy, eur in revenue.annualised(headline, params.power_mw).items():
         log.info("headline %-14s %10.0f EUR/MW/year", strategy, eur)
     return days
 
 
 def main() -> None:
-    """Parse arguments and run each pipeline step with timing."""
+    """Load inputs, apply CLI overrides, and run each pipeline step with timing."""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=config.PARAMS_FILE, help="inputs file")
+    parser.add_argument("--start", type=date.fromisoformat, help="headline start, YYYY-MM-DD")
+    parser.add_argument("--end", type=date.fromisoformat, help="headline end (inclusive)")
     parser.add_argument("--refresh", action="store_true", help="re-download existing raw months")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    params = config.load_params(args.config)
+    overrides = {k: v for k, v in (("start", args.start), ("end", args.end)) if v is not None}
+    if overrides:
+        params = dataclasses.replace(params, **overrides)
+        # Re-check ordering: CLI dates bypass the file validation.
+        if not params.trend_start <= params.start <= params.end:
+            parser.error("need trend_start <= --start <= --end")
+    log.info("inputs: %s", params)
+
     steps: list[tuple[str, Callable[[], object]]] = [
-        ("extract", partial(extract, args.refresh)),
-        ("validate", validate_raw),
+        ("extract", partial(extract, params, args.refresh)),
+        ("validate", partial(validate_raw, params)),
         ("transform", transform_raw),
-        ("revenue", compute_revenue),
+        ("revenue", partial(compute_revenue, params)),
     ]
     for step_name, step in steps:
         t0 = time.perf_counter()

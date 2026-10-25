@@ -47,8 +47,12 @@ pytest                                 # tests
 ruff check .                           # lint
 ruff format --check .                  # format check
 mypy src                               # type check
-python -m nordic_bess.pipeline --start YYYY-MM-DD --end YYYY-MM-DD [--refresh]   # pipeline
+python -m nordic_bess.pipeline [--config params.toml] [--start YYYY-MM-DD --end YYYY-MM-DD] [--refresh]
 ```
+
+All user inputs (periods, battery size, efficiency, availability) live in `params.toml`, each with
+a comment saying why it has that value. Market rules (Fingrid Table 10) are constants in
+`config.py` with their source. Never hard-code an input in code; never make a market rule an input.
 
 ## Definition of done
 

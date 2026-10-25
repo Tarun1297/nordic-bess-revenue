@@ -15,6 +15,17 @@ def wide(fcr_n: list[float], up: list[float], down: list[float]) -> pd.DataFrame
     return pd.DataFrame({"fcr_n": fcr_n, "fcr_d_up": up, "fcr_d_down": down}, index=idx)
 
 
+def test_max_fcr_bids_for_one_hour_battery() -> None:
+    # FCR-N: energy-bound, 1 MWh / (2 x 1 h) = 0.5. FCR-D: power-bound, 1 MW / 1.2 = 0.833.
+    assert revenue.max_fcr_bids(1.0, 1.0) == pytest.approx((0.5, 1 / 1.2))
+
+
+def test_max_fcr_bids_matches_fingrid_worked_example() -> None:
+    # Technical Requirements v1.1 simulate "a 1.34 MW / 2 MWh battery" providing 1 MW of FCR-N.
+    fcr_n, _ = revenue.max_fcr_bids(1.34, 2.0)
+    assert fcr_n == pytest.approx(1.0)
+
+
 def test_to_wide_pivots_products() -> None:
     idx = hours("2026-01-01", 2)
     tidy = pd.DataFrame(

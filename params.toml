@@ -1,0 +1,30 @@
+# Inputs for the Nordic BESS revenue benchmark. Edit, then re-run:
+#   python -m nordic_bess.pipeline
+# For a scenario, copy this file and run:  python -m nordic_bess.pipeline --config my.toml
+# Market rules (Fingrid Table 10 reservations) are not inputs; they live in config.py with
+# their source. Every value below says why it has that value.
+
+[period]
+# Headline window: the last 12 full calendar months before the build date (2026-10-25).
+# Full months avoid half-month bias, and 12 of them cover every season once.
+start = 2025-10-01
+end = 2026-09-30            # inclusive
+# Trend window: four full October-September years. Four years reach back to 2022-23, the last
+# year before batteries crowded into FCR, so the saturation shows. October-September keeps
+# each winter in one year. All three products have data then (FCR-D down starts 21.4.2021).
+trend_start = 2022-10-01
+
+[battery]
+# 1 MW / 1 MWh: the brief's reference unit. Revenue is reported per MW, so the power size only
+# scales results; the energy/power ratio (1 hour) is what changes them, because Fingrid's
+# rules cap FCR bids by stored energy. 1-2 hour systems are typical in the Nordics
+# (RaboResearch, "Backup power for Europe - part 8", 16 July 2026).
+power_mw = 1.0
+energy_mwh = 1.0
+# 88 % AC round trip: the brief's assumption, in the usual range for lithium-ion including
+# inverter and transformer losses. Only day-ahead arbitrage uses it (phase 8); FCR capacity
+# payments do not depend on efficiency.
+round_trip_efficiency = 0.88
+# 100 % availability: the brief's simplification, so results show the market's potential.
+# Real plants lose hours to maintenance and outages; set e.g. 0.97 for a scenario.
+availability = 1.0
