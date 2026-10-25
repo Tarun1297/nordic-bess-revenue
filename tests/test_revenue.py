@@ -5,11 +5,11 @@ import pytest
 
 from nordic_bess import revenue
 
-UTC = "UTC"
+CET = "Europe/Berlin"
 
 
 def hours(start: str, n: int) -> pd.DatetimeIndex:
-    return pd.date_range(start, periods=n, freq="h", tz=UTC)
+    return pd.date_range(start, periods=n, freq="h", tz=CET)
 
 
 def wide(fcr_n: list[float], up: list[float], down: list[float]) -> pd.DataFrame:
@@ -38,7 +38,7 @@ def test_to_wide_pivots_products() -> None:
     idx = hours("2026-01-01", 2)
     tidy = pd.DataFrame(
         {
-            "timestamp_utc": list(idx) * 2,
+            "timestamp_cet": list(idx) * 2,
             "product": ["fcr_n"] * 2 + ["fcr_d_up"] * 2,
             "price": [1.0, 2.0, 3.0, 4.0],
         }
@@ -60,7 +60,7 @@ def test_arbitrage_charge_must_precede_discharge() -> None:
     # Cheapest hour (10) comes last, so it cannot be used. Best legal pair: charge at 50, sell at
     # 100 -> 100 - 50 / 0.88 = 43.1818...
     p = pd.Series([50.0, 100.0, 10.0], index=hours("2026-01-01", 3))
-    out = revenue.arbitrage(p, 1.0, 0.88, UTC)
+    out = revenue.arbitrage(p, 1.0, 0.88)
     assert out.tolist() == pytest.approx([-50 / 0.88, 100.0, 0.0])
     assert out.sum() == pytest.approx(43.1818, abs=1e-4)
 
@@ -68,29 +68,29 @@ def test_arbitrage_charge_must_precede_discharge() -> None:
 def test_arbitrage_profits_from_negative_charge_price() -> None:
     # Paid 20 to charge, sell at 30 -> 30 + 20 / 0.88 = 52.7273
     p = pd.Series([-20.0, 30.0], index=hours("2026-01-01", 2))
-    assert revenue.arbitrage(p, 1.0, 0.88, UTC).sum() == pytest.approx(52.7273, abs=1e-4)
+    assert revenue.arbitrage(p, 1.0, 0.88).sum() == pytest.approx(52.7273, abs=1e-4)
 
 
 def test_arbitrage_skips_unprofitable_day() -> None:
     # Falling prices: best pair 90 then 80 loses money, so no trade.
     p = pd.Series([100.0, 90.0, 80.0], index=hours("2026-01-01", 3))
-    assert (revenue.arbitrage(p, 1.0, 0.88, UTC) == 0).all()
+    assert (revenue.arbitrage(p, 1.0, 0.88) == 0).all()
 
 
 def test_arbitrage_one_cycle_per_day() -> None:
     # Two days; each trades once on its own prices: day 1: 60 - 30/0.88, day 2: 40 - 10/0.88.
     p = pd.Series([30.0, 60.0, 10.0, 40.0], index=hours("2026-01-01T22:00", 4))
-    # Hours 22,23 UTC on 1 Jan; 00,01 UTC on 2 Jan.
-    daily = revenue.arbitrage(p, 1.0, 0.88, UTC).groupby(p.index.date).sum()
+    # Hours 22,23 CET on 1 Jan; 00,01 CET on 2 Jan.
+    daily = revenue.arbitrage(p, 1.0, 0.88).groupby(p.index.date).sum()
     assert daily.tolist() == pytest.approx([60 - 30 / 0.88, 40 - 10 / 0.88])
 
 
 def test_daily_drops_partial_day_and_keeps_dst_day(caplog: pytest.LogCaptureFixture) -> None:
     # Spring DST in CET: 2026-03-29 has 23 local hours (22:00 UTC 28 Mar to 22:00 UTC 29 Mar).
-    idx = pd.date_range("2026-03-28T20:00", "2026-03-29T21:00", freq="h", tz=UTC)
+    idx = pd.date_range("2026-03-28T20:00", "2026-03-29T21:00", freq="h", tz="UTC").tz_convert(CET)
     hourly = pd.DataFrame({"a": 1.0}, index=idx)
     with caplog.at_level("INFO"):
-        days = revenue.daily(hourly, "Europe/Berlin")
+        days = revenue.daily(hourly)
     # 28 Mar local has only 2 of 24 hours -> dropped; 29 Mar has all 23 -> kept.
     assert days.index.tolist() == [pd.Timestamp("2026-03-29")]
     assert days["a"].tolist() == [23.0]

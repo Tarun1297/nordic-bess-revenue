@@ -26,8 +26,10 @@ def test_hourly_fixture_passes_through_unchanged() -> None:
 
     assert list(df.columns) == transform.COLUMNS
     assert len(df) == 72  # includes the DST day as 24 UTC hours
-    assert str(df["timestamp_utc"].dt.tz) == "UTC"
-    assert df["timestamp_utc"].is_monotonic_increasing
+    assert str(df["timestamp_cet"].dt.tz) == "Europe/Berlin"
+    assert df["timestamp_cet"].is_monotonic_increasing
+    # 2026-03-29 is the 23-hour CET day: 22:00 UTC 28 Mar to 22:00 UTC 29 Mar.
+    assert (df["timestamp_cet"].dt.date.astype(str) == "2026-03-29").sum() == 23
     assert df["price"].tolist() == raw["value"].tolist()  # no value altered
     assert set(df["product"]) == {"fcr_n"} and set(df["unit"]) == {"EUR/MW/h"}
 
@@ -41,7 +43,7 @@ def test_quarter_hours_are_averaged_including_negatives(caplog: pytest.LogCaptur
 
     # Hand-calculated: (10 + 20 - 30 + 40) / 4 = 10; the lone 01:00 quarter stays 8.
     assert df["price"].tolist() == [10.0, 8.0]
-    assert df["timestamp_utc"].tolist() == list(
+    assert df["timestamp_cet"].tolist() == list(
         pd.to_datetime(["2026-10-01T00:00", "2026-10-01T01:00"], utc=True)
     )
     assert "aggregated 5 rows into 2 hourly prices (1 hours only partly covered)" in caplog.text
@@ -65,3 +67,12 @@ def test_mixed_resolution_does_not_flag_hourly_rows_as_partial(
 def test_empty_input_gives_empty_table() -> None:
     df = transform.tidy(raw_rows([], 60, []), "fcr_n", "EUR/MW/h")
     assert df.empty and list(df.columns) == transform.COLUMNS
+
+
+def test_autumn_dst_quarters_stay_two_distinct_hours() -> None:
+    # 2026-10-25: 00:00 and 01:00 UTC are both "02:00" local (CEST, then CET). Averaging in UTC
+    # keeps them as two hours instead of failing or merging them.
+    starts = [f"2026-10-25T{h:02d}:{m:02d}" for h in (0, 1) for m in (0, 15, 30, 45)]
+    df = transform.tidy(raw_rows(starts, 15, [1.0] * 4 + [3.0] * 4), "day_ahead", "EUR/MWh")
+    assert df["price"].tolist() == [1.0, 3.0]
+    assert [t.utcoffset().total_seconds() / 3600 for t in df["timestamp_cet"]] == [2.0, 1.0]

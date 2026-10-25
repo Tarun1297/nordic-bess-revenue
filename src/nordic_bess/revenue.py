@@ -14,8 +14,8 @@ log = logging.getLogger(__name__)
 def market_window_utc(first: date, last: date, tz: str) -> tuple[pd.Timestamp, pd.Timestamp]:
     """UTC bounds [start, end) of the whole market days first..last (inclusive) in tz.
 
-    Periods are chosen in market days (CET), but data stays in UTC (rule 5), so this is the one
-    place the two meet. Example: 2022-01-01 in CET starts at 2021-12-31 23:00 UTC.
+    The raw API files are UTC months, so extraction needs the market period in UTC.
+    Example: 2022-01-01 in CET starts at 2021-12-31 23:00 UTC.
     """
     start = pd.Timestamp(first).tz_localize(tz).tz_convert("UTC")
     end = pd.Timestamp(last + timedelta(days=1)).tz_localize(tz).tz_convert("UTC")
@@ -39,8 +39,8 @@ def max_fcr_bids(power_mw: float, energy_mwh: float) -> tuple[float, float]:
 
 
 def to_wide(prices: pd.DataFrame) -> pd.DataFrame:
-    """Pivot the tidy price table to one column per product, indexed by UTC hour."""
-    return prices.pivot(index="timestamp_utc", columns="product", values="price")
+    """Pivot the tidy price table to one column per product, indexed by CET hour."""
+    return prices.pivot(index="timestamp_cet", columns="product", values="price")
 
 
 def fcr_n_only(wide: pd.DataFrame, bid_mw: float) -> pd.Series:
@@ -59,8 +59,10 @@ def fcr_d_stacked(wide: pd.DataFrame, bid_mw: float) -> pd.Series:
     return ((wide["fcr_d_up"] + wide["fcr_d_down"]) * bid_mw).rename("fcr_d_stacked")
 
 
-def arbitrage(day_ahead: pd.Series, energy_mwh: float, efficiency: float, tz: str) -> pd.Series:
+def arbitrage(day_ahead: pd.Series, energy_mwh: float, efficiency: float) -> pd.Series:
     """Hourly EUR from one perfect-foresight charge/discharge cycle per market day.
+
+    The index must be tz-aware market time: its calendar date defines the market day.
 
     For each day, pick the charge hour c and later discharge hour d that maximise
     p_d * E - p_c * E / efficiency; trade only if that is positive. This equals "cheapest hour
@@ -69,7 +71,7 @@ def arbitrage(day_ahead: pd.Series, energy_mwh: float, efficiency: float, tz: st
     charge hour (negative) and the income in the discharge hour, so daily sums are exact.
     """
     out = pd.Series(0.0, index=day_ahead.index, name="arbitrage")
-    day = pd.DatetimeIndex(day_ahead.index).tz_convert(tz).date
+    day = pd.DatetimeIndex(day_ahead.index).date
     for _, p in day_ahead.groupby(day):
         prices = p.to_numpy()
         if len(prices) < 2:
@@ -87,9 +89,9 @@ def arbitrage(day_ahead: pd.Series, energy_mwh: float, efficiency: float, tz: st
     return out
 
 
-def daily(hourly: pd.DataFrame, tz: str) -> pd.DataFrame:
-    """Sum hourly EUR per market day, keeping only complete days and logging any dropped."""
-    local = pd.DatetimeIndex(hourly.index).tz_convert(tz)
+def daily(hourly: pd.DataFrame) -> pd.DataFrame:
+    """Sum hourly EUR per market day (the index's own calendar), keeping only complete days."""
+    local = pd.DatetimeIndex(hourly.index)
     day_start = local.normalize()
     # Calendar-aware day length: 23 h and 25 h on the DST change days, 24 h otherwise.
     expected = ((day_start + pd.DateOffset(days=1)) - day_start) / pd.Timedelta(hours=1)

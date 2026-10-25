@@ -1,23 +1,29 @@
-"""Raw dataset rows to one tidy hourly UTC table: timestamp_utc, product, price, unit (Silver)."""
+"""Raw dataset rows to one tidy hourly CET table: timestamp_cet, product, price, unit (Silver)."""
 
 import logging
 
 import pandas as pd
 
+from nordic_bess import config
+
 log = logging.getLogger(__name__)
 
-COLUMNS = ["timestamp_utc", "product", "price", "unit"]
+COLUMNS = ["timestamp_cet", "product", "price", "unit"]
 HOUR = pd.Timedelta(hours=1)
 
 
 def tidy(raw: pd.DataFrame, product: str, unit: str) -> pd.DataFrame:
-    """Turn raw API rows for one product into the tidy schema, at hourly resolution."""
+    """Turn raw API rows for one product into the tidy schema, hourly, in market time (CET).
+
+    Raw rows are UTC (as the API returns them). Hourly averaging happens in UTC first, because
+    rounding to the hour in local time hits an ambiguous hour on the autumn DST change.
+    """
     start = pd.to_datetime(raw["startTime"], utc=True, format="ISO8601")
     length = pd.to_datetime(raw["endTime"], utc=True, format="ISO8601") - start
     df = pd.DataFrame(
         {
             # Validation already proved these are explicit UTC; parsing keeps them tz-aware.
-            "timestamp_utc": start,
+            "timestamp_cet": start,
             "product": product,
             "price": raw["value"].astype(float),
             "unit": unit,
@@ -25,7 +31,10 @@ def tidy(raw: pd.DataFrame, product: str, unit: str) -> pd.DataFrame:
     )
     if (length < HOUR).any():
         df = _to_hourly(df, length)
-    return df.sort_values("timestamp_utc", ignore_index=True)
+    # Market time from here on: CET/CEST (Europe/Berlin), the calendar Fingrid's FCR market
+    # days use. Still tz-aware, so the repeated autumn hour stays unambiguous.
+    df["timestamp_cet"] = df["timestamp_cet"].dt.tz_convert(config.MARKET_TZ)
+    return df.sort_values("timestamp_cet", ignore_index=True)
 
 
 def _to_hourly(df: pd.DataFrame, length: pd.Series) -> pd.DataFrame:
@@ -37,8 +46,8 @@ def _to_hourly(df: pd.DataFrame, length: pd.Series) -> pd.DataFrame:
     delivery across the hour. Summing would overstate both by up to 4x.
     """
     out = (
-        df.assign(timestamp_utc=df["timestamp_utc"].dt.floor("h"), length=length)
-        .groupby(["timestamp_utc", "product", "unit"], as_index=False)
+        df.assign(timestamp_cet=df["timestamp_cet"].dt.floor("h"), length=length)
+        .groupby(["timestamp_cet", "product", "unit"], as_index=False)
         .agg(price=("price", "mean"), covered=("length", "sum"))
     )
     # Coverage, not row count, finds partial hours, so already-hourly rows in a mixed series

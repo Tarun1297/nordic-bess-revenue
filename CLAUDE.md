@@ -22,7 +22,9 @@ results, wait for "go". One small Conventional Commit per phase (`feat:`, `test:
    `pre-commit`. Ask before adding anything else.
 4. **Pure logic, separate from I/O.** Validation and revenue functions take DataFrames and return
    DataFrames. They never call APIs or read files.
-5. **All timestamps are timezone-aware UTC** inside the pipeline. Convert at the edges only.
+5. **All timestamps are timezone-aware CET** (Europe/Berlin: CET in winter, CEST in summer) from
+   the clean table onwards, the calendar of the FCR market days. Raw files keep the API's UTC as
+   returned. (Changed from UTC at the user's request on 2026-10-25.)
 6. **No silent data changes.** Never drop, fill or clip without logging how many rows and why.
    Negative prices are valid data; never drop them.
 7. **Tests never call live APIs.** Use small fixture files in `tests/fixtures/`.

@@ -96,14 +96,14 @@ def compute_revenue(params: config.Params) -> pd.DataFrame:
     fcr_n_mw, fcr_d_mw = revenue.max_fcr_bids(params.power_mw, params.energy_mwh)
     log.info("compliant bids: FCR-N %.3f MW, FCR-D up+down %.3f MW each", fcr_n_mw, fcr_d_mw)
     wide = revenue.to_wide(pd.read_parquet(config.DATA_CLEAN / "prices.parquet"))
-    start, end = revenue.market_window_utc(params.trend_start, params.end, config.MARKET_TZ)
-    wide = wide[(wide.index >= start) & (wide.index < end)]
+    # The index is CET, so date strings select whole market days directly.
+    wide = wide.loc[str(params.trend_start) : str(params.end)]
     hourly = pd.concat(
         [revenue.fcr_n_only(wide, fcr_n_mw), revenue.fcr_d_stacked(wide, fcr_d_mw)], axis=1
     )
     log.info("day-ahead prices not loaded yet (phase 8): arbitrage strategy skipped")
     # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.
-    days = revenue.best_of(revenue.daily(hourly, config.MARKET_TZ) * params.availability)
+    days = revenue.best_of(revenue.daily(hourly) * params.availability)
     days.to_parquet(config.DATA_CLEAN / "revenue_daily.parquet")
     headline = days.loc[str(params.start) : str(params.end)]
     for strategy, eur in revenue.annualised(headline, params.power_mw).items():

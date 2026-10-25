@@ -13,8 +13,9 @@ DATA_RAW = ROOT / "data" / "raw"
 DATA_CLEAN = ROOT / "data" / "clean"
 DATA_OUTPUT = ROOT / "data" / "output"
 
-# FCR bids are made per market day in CET/CEST (dataset pages: "for each CET-timezone day"),
-# so daily decisions and monthly totals use this calendar. Everything else stays in UTC.
+# Pipeline time zone (rule 5): CET in winter, CEST in summer. FCR bids are made per market day
+# in this calendar (dataset pages: "for each CET-timezone day"); a fixed UTC+1 clock would put
+# summer market days an hour off. Raw files keep the API's UTC; everything after is CET.
 MARKET_TZ = "Europe/Berlin"
 
 
