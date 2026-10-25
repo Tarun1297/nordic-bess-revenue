@@ -9,7 +9,7 @@ from functools import partial
 
 import pandas as pd
 
-from nordic_bess import config, validate
+from nordic_bess import config, transform, validate
 from nordic_bess.sources import fingrid
 
 log = logging.getLogger(__name__)
@@ -53,6 +53,23 @@ def validate_raw() -> dict[str, list[validate.CheckResult]]:
     return report
 
 
+def transform_raw() -> pd.DataFrame:
+    """Build data/clean/prices.parquet: one tidy hourly UTC table across all products."""
+    prices = pd.concat(
+        [
+            transform.tidy(fingrid.load_raw(dataset_id), product, config.FCR_UNIT)
+            for dataset_id, product in config.FINGRID_DATASETS.items()
+        ],
+        ignore_index=True,
+    )
+    config.DATA_CLEAN.mkdir(parents=True, exist_ok=True)
+    prices.to_parquet(config.DATA_CLEAN / "prices.parquet", index=False)
+    log.info(
+        "wrote prices.parquet (%d rows, %d products)", len(prices), prices["product"].nunique()
+    )
+    return prices
+
+
 def main() -> None:
     """Parse arguments and run each pipeline step with timing."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -63,6 +80,7 @@ def main() -> None:
     steps: list[tuple[str, Callable[[], object]]] = [
         ("extract", partial(extract, args.refresh)),
         ("validate", validate_raw),
+        ("transform", transform_raw),
     ]
     for step_name, step in steps:
         t0 = time.perf_counter()

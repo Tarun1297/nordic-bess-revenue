@@ -35,6 +35,9 @@ FINGRID_MIN_INTERVAL_S = 2.0  # documented limit: one request every two seconds 
 # 8,760 hours flags about 9 hours per product per year.
 OUTLIER_QUANTILE = 0.999
 
+# All three FCR prices share one unit (dataset pages say "EUR/MW", priced per hour).
+FCR_UNIT = "EUR/MW/h"
+
 FINGRID_DATASETS: dict[int, str] = {
     317: "fcr_n",
     318: "fcr_d_up",
