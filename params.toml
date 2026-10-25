@@ -9,10 +9,11 @@
 # Full months avoid half-month bias, and 12 of them cover every season once.
 start = 2025-10-01
 end = 2026-09-30            # inclusive
-# Trend window: four full October-September years. Four years reach back to 2022-23, the last
-# year before batteries crowded into FCR, so the saturation shows. October-September keeps
-# each winter in one year. All three products have data then (FCR-D down starts 21.4.2021).
-trend_start = 2022-10-01
+# Trend window: calendar years 2022-2025 in full, plus 2026 year-to-date up to `end`.
+# 2022 is the last year before batteries crowded into FCR, so the saturation shows; calendar
+# years are how the market is usually reported. All three products have data from then on
+# (FCR-D down starts 21.4.2021).
+trend_start = 2022-01-01
 
 [battery]
 # 1 MW / 1 MWh: the brief's reference unit. Revenue is reported per MW, so the power size only
