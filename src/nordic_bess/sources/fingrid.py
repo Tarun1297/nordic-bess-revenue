@@ -115,6 +115,14 @@ def raw_path(dataset_id: int, month: date) -> Path:
     return config.DATA_RAW / f"fingrid_{dataset_id}_{month:%Y_%m}.parquet"
 
 
+def load_raw(dataset_id: int) -> pd.DataFrame:
+    """Concatenate every monthly raw file of one dataset, in month order."""
+    paths = sorted(config.DATA_RAW.glob(f"fingrid_{dataset_id}_*.parquet"))
+    if not paths:
+        raise FileNotFoundError(f"no raw files for dataset {dataset_id} in {config.DATA_RAW}")
+    return pd.concat((pd.read_parquet(p) for p in paths), ignore_index=True)
+
+
 def download(
     dataset_ids: list[int],
     first: date,

@@ -31,6 +31,10 @@ FINGRID_MIN_INTERVAL_S = 2.0  # documented limit: one request every two seconds 
 #     49.5 Hz after a large plant or interconnector trips. Activated rarely, paid every hour.
 #   FCR-D down (283): disturbance reserve; absorbs power (battery charges) when frequency
 #     rises, keeping it below 50.5 Hz after a large load is lost. Data starts 21.4.2021.
+# Validation: values above this percentile are flagged for review (never dropped). 0.999 of
+# 8,760 hours flags about 9 hours per product per year.
+OUTLIER_QUANTILE = 0.999
+
 FINGRID_DATASETS: dict[int, str] = {
     317: "fcr_n",
     318: "fcr_d_up",
