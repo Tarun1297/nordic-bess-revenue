@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from nordic_bess import config, revenue, transform, validate
+from nordic_bess import config, report, revenue, transform, validate
 from nordic_bess.sources import fingrid
 
 log = logging.getLogger(__name__)
@@ -111,6 +111,14 @@ def compute_revenue(params: config.Params) -> pd.DataFrame:
     return days
 
 
+def timed[T](name: str, step: Callable[[], T]) -> T:
+    """Run one pipeline step, log how long it took, and pass its result on."""
+    t0 = time.perf_counter()
+    result = step()
+    log.info("step %s done in %.1f s", name, time.perf_counter() - t0)
+    return result
+
+
 def main() -> None:
     """Load inputs, apply CLI overrides, and run each pipeline step with timing."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -130,16 +138,11 @@ def main() -> None:
             parser.error("need trend_start <= --start <= --end")
     log.info("inputs: %s", params)
 
-    steps: list[tuple[str, Callable[[], object]]] = [
-        ("extract", partial(extract, params, args.refresh)),
-        ("validate", partial(validate_raw, params)),
-        ("transform", transform_raw),
-        ("revenue", partial(compute_revenue, params)),
-    ]
-    for step_name, step in steps:
-        t0 = time.perf_counter()
-        step()
-        log.info("step %s done in %.1f s", step_name, time.perf_counter() - t0)
+    timed("extract", partial(extract, params, args.refresh))
+    quality = timed("validate", partial(validate_raw, params))
+    prices = timed("transform", transform_raw)
+    days = timed("revenue", partial(compute_revenue, params))
+    timed("report", partial(report.write_outputs, days, prices, params, quality))
 
 
 if __name__ == "__main__":
