@@ -1,3 +1,5 @@
+from datetime import date
+
 import pandas as pd
 import pytest
 
@@ -13,6 +15,12 @@ def hours(start: str, n: int) -> pd.DatetimeIndex:
 def wide(fcr_n: list[float], up: list[float], down: list[float]) -> pd.DataFrame:
     idx = hours("2026-01-01", len(fcr_n))
     return pd.DataFrame({"fcr_n": fcr_n, "fcr_d_up": up, "fcr_d_down": down}, index=idx)
+
+
+def test_market_window_covers_whole_cet_days_in_utc() -> None:
+    start, end = revenue.market_window_utc(date(2022, 1, 1), date(2026, 9, 30), "Europe/Berlin")
+    assert start == pd.Timestamp("2021-12-31T23:00", tz="UTC")  # winter: CET = UTC+1
+    assert end == pd.Timestamp("2026-09-30T22:00", tz="UTC")  # summer: CEST = UTC+2
 
 
 def test_max_fcr_bids_for_one_hour_battery() -> None:

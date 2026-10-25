@@ -5,7 +5,7 @@ import dataclasses
 import logging
 import time
 from collections.abc import Callable
-from datetime import date, timedelta
+from datetime import date
 from functools import partial
 from pathlib import Path
 
@@ -17,16 +17,30 @@ from nordic_bess.sources import fingrid
 log = logging.getLogger(__name__)
 
 
+def raw_span_utc(params: config.Params) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """Whole UTC months [start, end) that contain every hour of the trend's market days.
+
+    Raw files are UTC months, while periods are CET market days that start an hour or two
+    earlier in UTC. E.g. 1 Jan 2022 CET begins 31 Dec 2021 23:00 UTC, so December 2021 is
+    needed for 2022 to be a full year.
+    """
+    start, end = revenue.market_window_utc(params.trend_start, params.end, config.MARKET_TZ)
+    first_month = start.date().replace(day=1)
+    after_last = fingrid.next_month((end - pd.Timedelta(hours=1)).date())
+    return pd.Timestamp(first_month, tz="UTC"), pd.Timestamp(after_last, tz="UTC")
+
+
 def extract(params: config.Params, refresh: bool) -> None:
-    """Download raw Fingrid data for the trend period (skips months already on disk)."""
-    fingrid.download(list(config.FINGRID_DATASETS), params.trend_start, params.end, refresh)
+    """Download raw Fingrid months covering the trend period (skips months already on disk)."""
+    start, end = raw_span_utc(params)
+    last = (end - pd.Timedelta(days=1)).date()
+    fingrid.download(list(config.FINGRID_DATASETS), start.date(), last, refresh)
 
 
 def validate_raw(params: config.Params) -> dict[str, list[validate.CheckResult]]:
     """Validate every raw dataset, log a summary, and raise if any critical check failed."""
-    start_utc = pd.Timestamp(params.trend_start, tz="UTC")
-    # The end date is inclusive, so the exclusive bound is the following midnight.
-    end_utc = pd.Timestamp(params.end + timedelta(days=1), tz="UTC")
+    # Validate whole UTC months so every UTC day in the span is complete by construction.
+    start_utc, end_utc = raw_span_utc(params)
     report = {}
     for dataset_id, name in config.FINGRID_DATASETS.items():
         raw = fingrid.load_raw(dataset_id)
@@ -82,13 +96,14 @@ def compute_revenue(params: config.Params) -> pd.DataFrame:
     fcr_n_mw, fcr_d_mw = revenue.max_fcr_bids(params.power_mw, params.energy_mwh)
     log.info("compliant bids: FCR-N %.3f MW, FCR-D up+down %.3f MW each", fcr_n_mw, fcr_d_mw)
     wide = revenue.to_wide(pd.read_parquet(config.DATA_CLEAN / "prices.parquet"))
+    start, end = revenue.market_window_utc(params.trend_start, params.end, config.MARKET_TZ)
+    wide = wide[(wide.index >= start) & (wide.index < end)]
     hourly = pd.concat(
         [revenue.fcr_n_only(wide, fcr_n_mw), revenue.fcr_d_stacked(wide, fcr_d_mw)], axis=1
     )
     log.info("day-ahead prices not loaded yet (phase 8): arbitrage strategy skipped")
     # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.
     days = revenue.best_of(revenue.daily(hourly, config.MARKET_TZ) * params.availability)
-    days = days.loc[str(params.trend_start) : str(params.end)]
     days.to_parquet(config.DATA_CLEAN / "revenue_daily.parquet")
     headline = days.loc[str(params.start) : str(params.end)]
     for strategy, eur in revenue.annualised(headline, params.power_mw).items():

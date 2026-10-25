@@ -1,6 +1,7 @@
 """Battery revenue strategies as pure functions: prices in, EUR out, no I/O."""
 
 import logging
+from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,17 @@ import pandas as pd
 from nordic_bess import config
 
 log = logging.getLogger(__name__)
+
+
+def market_window_utc(first: date, last: date, tz: str) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """UTC bounds [start, end) of the whole market days first..last (inclusive) in tz.
+
+    Periods are chosen in market days (CET), but data stays in UTC (rule 5), so this is the one
+    place the two meet. Example: 2022-01-01 in CET starts at 2021-12-31 23:00 UTC.
+    """
+    start = pd.Timestamp(first).tz_localize(tz).tz_convert("UTC")
+    end = pd.Timestamp(last + timedelta(days=1)).tz_localize(tz).tz_convert("UTC")
+    return start, end
 
 
 def max_fcr_bids(power_mw: float, energy_mwh: float) -> tuple[float, float]:
