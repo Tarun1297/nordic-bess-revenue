@@ -1,5 +1,7 @@
 # A battery in Finland earned at most 57,266 EUR/MW from frequency reserves in the last 12 months, 84% below the 2023 peak
 
+[![CI](https://github.com/Tarun1297/nordic-bess-revenue/actions/workflows/ci.yml/badge.svg)](https://github.com/Tarun1297/nordic-bess-revenue/actions/workflows/ci.yml)
+
 **Question:** where does a 1 MW / 1 MWh battery in Finland earn its money, and how has that changed?
 
 **Answer (October 2025 – September 2026):** in **FCR-D**. Offering FCR-D up and down together earned **53,215 EUR/MW/year**, against **39,831** for FCR-N. Picking the better product every day with perfect hindsight raises that to an upper bound of **57,266**. Since the 2023 peak of **346,660**, that upper bound has fallen by 84%, as batteries have filled Finland's reserve markets.
