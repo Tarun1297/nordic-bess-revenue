@@ -95,6 +95,54 @@ def arbitrage(
     return result
 
 
+def trade_room_mwh(energy_mwh: float, fcr_d_bid_mw: float) -> float:
+    """Energy a battery can trade while keeping its FCR-D energy reserve in both directions.
+
+    Table 10 reserves FCR_D_ENERGY_H of full activation per MW of FCR-D in each direction, so
+    a battery offering FCR-D up and down must always hold that much energy and that much room.
+    What is left between the two reserves can be traded without ever breaking FCR-D.
+    """
+    return max(0.0, energy_mwh - 2 * fcr_d_bid_mw * config.FCR_D_ENERGY_H)
+
+
+def fcr_d_plus_trade(
+    fcr_d_hourly: pd.Series, day_ahead_hourly: pd.Series, trade_mwh: float, efficiency: float
+) -> pd.Series:
+    """EUR per market day from FCR-D every hour except one charge hour and one later sell hour.
+
+    In the two trading hours the battery leaves FCR-D and buys `trade_mwh`, then sells
+    `trade_mwh * efficiency`. Trades are sized by trade_room_mwh, so FCR-D keeps its energy
+    reserve in every other hour. Blocks are whole clock hours because FCR is bought per hour;
+    day-ahead prices must be averaged to the hour first. A day trades only if the trade earns
+    more than the FCR-D income it gives up, so this never earns less than FCR-D alone. Both
+    inputs are indexed by the same tz-aware market-time hours; their date is the market day.
+    """
+    both = pd.concat({"fcr": fcr_d_hourly, "da": day_ahead_hourly}, axis=1, join="inner")
+    out: dict[object, float] = {}
+    for day, g in both.groupby(pd.DatetimeIndex(both.index).date):
+        fcr, price = g["fcr"].to_numpy(dtype=float), g["da"].to_numpy(dtype=float)
+        # Cheapest charge hour before each sell hour, counting the FCR-D income it gives up.
+        charge_cost = np.minimum.accumulate(trade_mwh * price + fcr)[:-1]
+        gain = efficiency * trade_mwh * price[1:] - fcr[1:] - charge_cost
+        out[day] = float(fcr.sum()) + max(float(gain.max()) if len(gain) else 0.0, 0.0)
+    result = pd.Series(out, name="fcr_d_plus_trade", dtype=float)
+    result.index = pd.to_datetime(result.index)
+    result.index.name = "market_day"
+    return result
+
+
+def hourly_mean(prices: pd.Series) -> pd.Series:
+    """Average sub-hourly prices to clock hours, keeping the index's time zone.
+
+    Grouping in UTC avoids the repeated autumn hour, where local hours are ambiguous.
+    """
+    tz = pd.DatetimeIndex(prices.index).tz
+    utc_hour = pd.DatetimeIndex(prices.index).tz_convert("UTC").floor("h")
+    hourly = prices.groupby(utc_hour).mean()
+    hourly.index = pd.DatetimeIndex(hourly.index).tz_convert(tz)
+    return hourly
+
+
 def daily(hourly: pd.DataFrame) -> pd.DataFrame:
     """Sum hourly EUR per market day (the index's own calendar), keeping only complete days."""
     local = pd.DatetimeIndex(hourly.index)

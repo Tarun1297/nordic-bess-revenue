@@ -17,8 +17,8 @@ from nordic_bess import config, revenue, validate  # noqa: E402
 
 log = logging.getLogger(__name__)
 
-# Arbitrage appears only when day-ahead prices were loaded (ENTSO-E key set).
-ALL_STRATEGIES = ["fcr_n", "fcr_d_stacked", "arbitrage", "best_of"]
+# The trading strategies appear only when day-ahead prices were loaded (ENTSO-E key set).
+ALL_STRATEGIES = ["fcr_n", "fcr_d_stacked", "arbitrage", "fcr_d_plus_trade", "best_of"]
 
 
 def strategies(days: pd.DataFrame) -> list[str]:
@@ -30,14 +30,17 @@ LABELS = {
     "fcr_n": "FCR-N",
     "fcr_d_stacked": "FCR-D up + down",
     "arbitrage": "Day-ahead arbitrage",
-    "best_of": "Daily best-of (upper bound)",
+    "fcr_d_plus_trade": "FCR-D + one trade",
+    "best_of": "Daily best-of",
     "fcr_d_up": "FCR-D up",
     "fcr_d_down": "FCR-D down",
 }
 # Colour follows the entity in every chart: FCR-N is always blue, the FCR-D family orange,
-# FCR-D down aqua. Validated for colour-blind separation (dataviz validate_palette.js, light).
+# FCR-D down aqua, arbitrage violet, FCR-D + one trade green. Validated for colour-blind
+# separation (dataviz validate_palette.js, light).
 COLORS = {
     "arbitrage": "#6250d6",
+    "fcr_d_plus_trade": "#008300",
     "fcr_n": "#2a78d6",
     "fcr_d_stacked": "#eb6834",
     "fcr_d_up": "#eb6834",
@@ -202,7 +205,9 @@ def build_summary(
             "Hourly-market FCR prices only; Fingrid's yearly-market contracts are not modelled.",
             "Bids are the largest allowed by Table 10 for this battery, applied to every year.",
             "Capacity payments only; activated-energy settlement is not modelled.",
-            "Perfect foresight for the daily best-of; no bidding risk.",
+            "Perfect foresight for the daily best-of: it takes the best modelled strategy each "
+            "day, so it is a ceiling for these strategies only, not for every schedule; "
+            "no bidding risk.",
             f"Availability {params.availability:.0%}; no degradation, fees or grid tariffs.",
             f"Day-ahead arbitrage: one cycle a day, buying {params.energy_mwh:g} MWh in a "
             f"{params.energy_mwh / params.power_mw:g}-hour block and selling "
@@ -313,7 +318,8 @@ def chart_monthly(
     _source(
         fig,
         SOURCE_NOTE.format(power=params.power_mw, energy=params.energy_mwh)
-        + "\nBest-of assumes perfect foresight; the % change compares the best-of line.",
+        + "\nBest-of takes the best modelled strategy each day with perfect foresight; "
+        "the % change compares the best-of line.",
     )
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -366,7 +372,8 @@ def chart_quarterly(
 ) -> None:
     """Draw grouped bars of quarterly revenue per strategy across the whole trend window."""
     q = quarterly_table(days, params.power_mw)
-    bars = [s for s in ("fcr_d_stacked", "fcr_n", "arbitrage") if s in q.columns]
+    order = ("fcr_d_plus_trade", "fcr_d_stacked", "fcr_n", "arbitrage")
+    bars = [s for s in order if s in q.columns]
     periods = pd.PeriodIndex(q["quarter_cet"], freq="Q")
     first_led = summary["first_quarter_fcr_n_out_earned_fcr_d"]
     if first_led and first_led == q["quarter_cet"].iloc[-1]:

@@ -19,7 +19,8 @@
     "fcr_n": 39831,
     "fcr_d_stacked": 53215,
     "arbitrage": 21038,
-    "best_of": 57834
+    "fcr_d_plus_trade": 58454,
+    "best_of": 61273
   },
   "nameplate_bid_sensitivity_eur_per_mw_year": {
     "fcr_n": 79663,
@@ -38,9 +39,13 @@
       "month": "2026-02",
       "eur_per_mw": 2979
     },
+    "fcr_d_plus_trade": {
+      "month": "2025-10",
+      "eur_per_mw": 8947
+    },
     "best_of": {
       "month": "2025-10",
-      "eur_per_mw": 8489
+      "eur_per_mw": 8960
     }
   },
   "worst_month": {
@@ -56,154 +61,179 @@
       "month": "2026-07",
       "eur_per_mw": 398
     },
+    "fcr_d_plus_trade": {
+      "month": "2026-07",
+      "eur_per_mw": 3169
+    },
     "best_of": {
       "month": "2025-12",
-      "eur_per_mw": 2874
+      "eur_per_mw": 3170
     }
   },
   "change_first_3_to_last_3_months_pct": {
     "fcr_n": 5.6,
     "fcr_d_stacked": -42.5,
     "arbitrage": -25.7,
-    "best_of": -33.7
+    "fcr_d_plus_trade": -41.0,
+    "best_of": -36.0
   },
   "days_won_by_strategy": {
-    "fcr_d_stacked": 266,
-    "fcr_n": 83,
-    "arbitrage": 16
+    "fcr_d_plus_trade": 224,
+    "fcr_d_stacked": 77,
+    "fcr_n": 62,
+    "arbitrage": 2
   },
   "quarterly_eur_per_mw": {
     "2022Q1": {
       "fcr_n": 20020,
       "fcr_d_stacked": 44101,
       "arbitrage": 9698,
-      "best_of": 45621,
+      "fcr_d_plus_trade": 45685,
+      "best_of": 46736,
       "days": 90
     },
     "2022Q2": {
       "fcr_n": 39464,
       "fcr_d_stacked": 54037,
       "arbitrage": 13313,
-      "best_of": 70616,
+      "fcr_d_plus_trade": 58121,
+      "best_of": 71642,
       "days": 91
     },
     "2022Q3": {
       "fcr_n": 39345,
       "fcr_d_stacked": 80651,
       "arbitrage": 24181,
-      "best_of": 87196,
+      "fcr_d_plus_trade": 88132,
+      "best_of": 92243,
       "days": 92
     },
     "2022Q4": {
       "fcr_n": 58113,
       "fcr_d_stacked": 94243,
       "arbitrage": 12135,
-      "best_of": 103184,
+      "fcr_d_plus_trade": 96066,
+      "best_of": 104564,
       "days": 92
     },
     "2023Q1": {
       "fcr_n": 27186,
       "fcr_d_stacked": 30110,
       "arbitrage": 5642,
-      "best_of": 35540,
+      "fcr_d_plus_trade": 31187,
+      "best_of": 35875,
       "days": 90
     },
     "2023Q2": {
       "fcr_n": 61460,
       "fcr_d_stacked": 86667,
       "arbitrage": 3247,
-      "best_of": 96296,
+      "fcr_d_plus_trade": 86835,
+      "best_of": 96393,
       "days": 91
     },
     "2023Q3": {
       "fcr_n": 71638,
       "fcr_d_stacked": 143277,
       "arbitrage": 5710,
-      "best_of": 148095,
+      "fcr_d_plus_trade": 143878,
+      "best_of": 148563,
       "days": 92
     },
     "2023Q4": {
       "fcr_n": 46016,
       "fcr_d_stacked": 59822,
       "arbitrage": 6324,
-      "best_of": 66811,
+      "fcr_d_plus_trade": 60572,
+      "best_of": 67003,
       "days": 92
     },
     "2024Q1": {
       "fcr_n": 47431,
       "fcr_d_stacked": 61648,
       "arbitrage": 6042,
-      "best_of": 66406,
+      "fcr_d_plus_trade": 62511,
+      "best_of": 67211,
       "days": 91
     },
     "2024Q2": {
       "fcr_n": 81024,
       "fcr_d_stacked": 87542,
       "arbitrage": 6391,
-      "best_of": 110452,
+      "fcr_d_plus_trade": 88347,
+      "best_of": 110813,
       "days": 91
     },
     "2024Q3": {
       "fcr_n": 36171,
       "fcr_d_stacked": 47872,
       "arbitrage": 4884,
-      "best_of": 53177,
+      "fcr_d_plus_trade": 48918,
+      "best_of": 53930,
       "days": 92
     },
     "2024Q4": {
       "fcr_n": 36600,
       "fcr_d_stacked": 50889,
       "arbitrage": 6565,
-      "best_of": 58730,
+      "fcr_d_plus_trade": 52514,
+      "best_of": 59733,
       "days": 92
     },
     "2025Q1": {
       "fcr_n": 28277,
       "fcr_d_stacked": 47114,
       "arbitrage": 6981,
-      "best_of": 49912,
+      "fcr_d_plus_trade": 48812,
+      "best_of": 51179,
       "days": 90
     },
     "2025Q2": {
       "fcr_n": 19963,
       "fcr_d_stacked": 42961,
       "arbitrage": 6019,
-      "best_of": 43382,
+      "fcr_d_plus_trade": 43987,
+      "best_of": 44188,
       "days": 91
     },
     "2025Q3": {
       "fcr_n": 21977,
       "fcr_d_stacked": 55711,
       "arbitrage": 6730,
-      "best_of": 56575,
+      "fcr_d_plus_trade": 56777,
+      "best_of": 57590,
       "days": 92
     },
     "2025Q4": {
       "fcr_n": 9854,
       "fcr_d_stacked": 17402,
       "arbitrage": 5385,
-      "best_of": 17703,
+      "fcr_d_plus_trade": 18650,
+      "best_of": 18707,
       "days": 92
     },
     "2026Q1": {
       "fcr_n": 9802,
       "fcr_d_stacked": 12228,
       "arbitrage": 6251,
-      "best_of": 13839,
+      "fcr_d_plus_trade": 13981,
+      "best_of": 15125,
       "days": 90
     },
     "2026Q2": {
       "fcr_n": 9773,
       "fcr_d_stacked": 13578,
       "arbitrage": 5399,
-      "best_of": 14561,
+      "fcr_d_plus_trade": 14829,
+      "best_of": 15473,
       "days": 91
     },
     "2026Q3": {
       "fcr_n": 10402,
       "fcr_d_stacked": 10007,
       "arbitrage": 4002,
-      "best_of": 11731,
+      "fcr_d_plus_trade": 10994,
+      "best_of": 11968,
       "days": 92
     }
   },
@@ -214,35 +244,40 @@
         "fcr_n": 156943,
         "fcr_d_stacked": 273032,
         "arbitrage": 59328,
-        "best_of": 306616,
+        "fcr_d_plus_trade": 288005,
+        "best_of": 315185,
         "days": 365
       },
       "2023": {
         "fcr_n": 206299,
         "fcr_d_stacked": 319876,
         "arbitrage": 20923,
-        "best_of": 346742,
+        "fcr_d_plus_trade": 322472,
+        "best_of": 347833,
         "days": 365
       },
       "2024": {
         "fcr_n": 200676,
         "fcr_d_stacked": 247274,
         "arbitrage": 23816,
-        "best_of": 287976,
+        "fcr_d_plus_trade": 251600,
+        "best_of": 290891,
         "days": 366
       },
       "2025": {
         "fcr_n": 80071,
         "fcr_d_stacked": 163188,
         "arbitrage": 25116,
-        "best_of": 167572,
+        "fcr_d_plus_trade": 168226,
+        "best_of": 171665,
         "days": 365
       },
       "2026": {
         "fcr_n": 40080,
         "fcr_d_stacked": 47882,
         "arbitrage": 20927,
-        "best_of": 53655,
+        "fcr_d_plus_trade": 53218,
+        "best_of": 56911,
         "days": 273
       }
     },
@@ -251,36 +286,41 @@
         "fcr_n": 132135,
         "fcr_d_stacked": 239041,
         "arbitrage": 63096,
-        "best_of": 271989
+        "fcr_d_plus_trade": 256622,
+        "best_of": 281599
       },
       "2023": {
         "fcr_n": 214299,
         "fcr_d_stacked": 347691,
         "arbitrage": 19519,
-        "best_of": 374267
+        "fcr_d_plus_trade": 350160,
+        "best_of": 375470
       },
       "2024": {
         "fcr_n": 219301,
         "fcr_d_stacked": 262511,
         "arbitrage": 23068,
-        "best_of": 306434
+        "fcr_d_plus_trade": 266125,
+        "best_of": 308991
       },
       "2025": {
         "fcr_n": 93881,
         "fcr_d_stacked": 194916,
         "arbitrage": 26380,
-        "best_of": 200375
+        "fcr_d_plus_trade": 199983,
+        "best_of": 204504
       },
       "2026": {
         "fcr_n": 40080,
         "fcr_d_stacked": 47882,
         "arbitrage": 20927,
-        "best_of": 53655
+        "fcr_d_plus_trade": 53218,
+        "best_of": 56911
       }
     },
     "ytd_window": "1 Jan to 30 Sep of each year",
     "peak_full_year": "2023",
-    "headline_vs_peak_pct": -83.3
+    "headline_vs_peak_pct": -82.4
   },
   "data_quality": [
     {
@@ -318,7 +358,7 @@
     "Hourly-market FCR prices only; Fingrid's yearly-market contracts are not modelled.",
     "Bids are the largest allowed by Table 10 for this battery, applied to every year.",
     "Capacity payments only; activated-energy settlement is not modelled.",
-    "Perfect foresight for the daily best-of; no bidding risk.",
+    "Perfect foresight for the daily best-of: it takes the best modelled strategy each day, so it is a ceiling for these strategies only, not for every schedule; no bidding risk.",
     "Availability 100%; no degradation, fees or grid tariffs.",
     "Day-ahead arbitrage: one cycle a day, buying 1 MWh in a 1-hour block and selling 0.88 MWh in a later block (15-minute prices from 1 Oct 2025, hourly before)."
   ],

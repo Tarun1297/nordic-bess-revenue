@@ -131,14 +131,23 @@ def compute_revenue(params: config.Params, with_day_ahead: bool) -> pd.DataFrame
         arb = revenue.arbitrage(
             da, params.power_mw, params.energy_mwh, params.round_trip_efficiency
         )
-        days = days.join(arb, how="left")
-        missing = int(days["arbitrage"].isna().sum())
-        if missing:
-            # Rule 6: a day without day-ahead prices earns nothing from arbitrage; say how many.
-            log.warning(
-                "%d market day(s) have no day-ahead prices; arbitrage counted as 0", missing
-            )
-            days["arbitrage"] = days["arbitrage"].fillna(0.0)
+        # Mixed day: FCR-D in all hours but one charge and one sell hour, with the trade sized
+        # so FCR-D keeps its Table 10 energy reserve throughout.
+        trade_mwh = revenue.trade_room_mwh(params.energy_mwh, fcr_d_mw)
+        log.info("FCR-D plus one trade: %.3f MWh traded per day", trade_mwh)
+        mixed = revenue.fcr_d_plus_trade(
+            hourly["fcr_d_stacked"],
+            revenue.hourly_mean(da),
+            trade_mwh,
+            params.round_trip_efficiency,
+        )
+        days = days.join([arb, mixed], how="left")
+        for col in ("arbitrage", "fcr_d_plus_trade"):
+            missing = int(days[col].isna().sum())
+            if missing:
+                # Rule 6: a day without day-ahead prices earns nothing from trading; say so.
+                log.warning("%d market day(s) lack day-ahead prices; %s set to 0", missing, col)
+                days[col] = days[col].fillna(0.0)
     else:
         log.info("ENTSOE_API_KEY not set: day-ahead arbitrage skipped")
     # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.

@@ -1,28 +1,29 @@
-# A battery in Finland earned at most 57,834 EUR/MW in the last 12 months, 83% below the 2023 peak
+# A battery in Finland earned up to 61,273 EUR/MW in the last 12 months, 82% below the 2023 peak
 
 [![CI](https://github.com/Tarun1297/nordic-bess-revenue/actions/workflows/ci.yml/badge.svg)](https://github.com/Tarun1297/nordic-bess-revenue/actions/workflows/ci.yml)
 
 **Question:** where does a 1 MW / 1 MWh battery in Finland earn its money, and how has that changed?
 
-**Answer (October 2025 – September 2026):** mostly in **FCR-D**. Offering FCR-D up and down together earned **53,215 EUR/MW/year**, against **39,831** for FCR-N and **21,038** for day-ahead arbitrage. Picking the best of the three every day with perfect hindsight gives an upper bound of **57,834**. Since the 2023 peak of **346,742**, that upper bound has fallen by 83%, as batteries have filled Finland's reserve markets.
+**Answer (October 2025 – September 2026):** mostly in **FCR-D**, topped up by one daily trade. Offering FCR-D up and down together every hour earned **53,215 EUR/MW/year**. Giving up two hours a day to buy cheap and sell dear raised that to **58,454**, the best single strategy. FCR-N earned **39,831** and pure day-ahead arbitrage **21,038**. Picking the best of these strategies every day with perfect hindsight gives **61,273**, a ceiling for these strategies only. Since the 2023 peak of **347,833**, that figure has fallen by 82%, as batteries have filled Finland's reserve markets.
 
 ## Key findings
 
-- **FCR-D is the main revenue stream for a 1-hour battery.** It won 266 of 365 days, FCR-N 83 and arbitrage 16.
+- **FCR-D, with one trade on top, is the main revenue stream for a 1-hour battery.** Each day's best strategy: FCR-D + one trade on 224 of 365 days, FCR-D alone on 77, FCR-N on 62 and pure arbitrage on 2.
 - **Fingrid's battery rules decide the ranking.** A 1 MWh battery may bid only **0.5 MW** into FCR-N but **0.833 MW** into each FCR-D direction. If the full 1 MW could be bid, FCR-N would lead with 79,663 against FCR-D's 63,858. A 2-hour battery can bid more FCR-N, and the ranking flips back. To check, set `energy_mwh = 2.0` in [params.toml](params.toml) and re-run.
 - **Reserve revenue is collapsing; trading revenue is not.** Annualised by calendar year, in EUR per MW:
 
-  | Year | FCR-N | FCR-D up + down | Day-ahead arbitrage | Daily best-of |
-  |---|---|---|---|---|
-  | 2022 | 156,943 | 273,032 | 59,328 | 306,616 |
-  | 2023 | 206,299 | 319,876 | 20,923 | 346,742 |
-  | 2024 | 200,676 | 247,274 | 23,816 | 287,976 |
-  | 2025 | 80,071 | 163,188 | 25,116 | 167,572 |
-  | 2026 (Jan–Sep) | 40,080 | 47,882 | 20,927 | 53,655 |
+  | Year | FCR-N | FCR-D up + down | Day-ahead arbitrage | FCR-D + one trade | Daily best-of |
+  |---|---|---|---|---|---|
+  | 2022 | 156,943 | 273,032 | 59,328 | 288,005 | 315,185 |
+  | 2023 | 206,299 | 319,876 | 20,923 | 322,472 | 347,833 |
+  | 2024 | 200,676 | 247,274 | 23,816 | 251,600 | 290,891 |
+  | 2025 | 80,071 | 163,188 | 25,116 | 168,226 | 171,665 |
+  | 2026 (Jan–Sep) | 40,080 | 47,882 | 20,927 | 53,218 | 56,911 |
 
   FCR-D fell by about 85% from 2023 to 2026, while arbitrage has held between 20,923 and 25,116 a year since 2023, after the 2022 energy crisis. In the last 12 months arbitrage earned 40% as much as FCR-D. 2026 covers January to September only; for the same months in every year, see `ytd_like_for_like` in [summary.json](data/output/summary.json).
-- **The decline is still running, and it hits FCR-D hardest.** From the first quarter of the headline year (Oct–Dec 2025) to the last (Jul–Sep 2026), FCR-D revenue fell 42.5% and arbitrage 25.7%, while FCR-N rose 5.6%. The best month was October 2025 (8,489 EUR/MW, best-of) and the worst was December 2025 (2,874).
-- **Quarter by quarter, FCR-N has now caught up.** In Q3 2026 FCR-N earned 10,402 EUR/MW against FCR-D's 10,007: the first quarter it came out ahead. FCR-D's best quarter was Q3 2023, at 143,277. Arbitrage has stayed between 3,247 and 6,981 per quarter since 2023, so its share of the quarterly best-of rose from 3% in Q2 2023 to 34–45% in 2026. See the [quarterly chart](data/output/charts/quarterly_revenue.png) and [quarterly_revenue.csv](data/output/quarterly_revenue.csv).
+- **Trading hours matter more as reserve prices fall.** Adding one trade to FCR-D was worth under 2% a year in 2023 and 2024, but 11% in 2026 and 10% over the last 12 months.
+- **The decline is still running, and it hits FCR-D hardest.** From the first quarter of the headline year (Oct–Dec 2025) to the last (Jul–Sep 2026), FCR-D revenue fell 42.5% and arbitrage 25.7%, while FCR-N rose 5.6%. The best month was October 2025 (8,960 EUR/MW, best-of) and the worst was December 2025 (3,170).
+- **Quarter by quarter, FCR-N has now caught up.** In Q3 2026 FCR-N earned 10,402 EUR/MW against FCR-D's 10,007: the first quarter it came out ahead. FCR-D's best quarter was Q3 2023, at 143,277. Arbitrage has stayed between 3,247 and 6,981 per quarter since 2023, so its share of the quarterly best-of rose from 3% in Q2 2023 to 33–41% in 2026. See the [quarterly chart](data/output/charts/quarterly_revenue.png) and [quarterly_revenue.csv](data/output/quarterly_revenue.csv).
 - **FCR-D up is an evening product.** Its price peaks at 18:00 CET, 3.4× its 03:00 low. FCR-N and FCR-D down stay almost flat through the day.
 
 ![Monthly battery revenue, 2022 to 2026](data/output/charts/monthly_revenue.png)
@@ -34,7 +35,7 @@ More charts: [price distribution per product](data/output/charts/price_distribut
 1. **Download** hourly FCR prices from Fingrid's open data API (datasets 317, 318 and 283) and Finnish day-ahead prices from the ENTSO-E Transparency Platform, December 2021 to September 2026.
 2. **Check** the data before using it: explicit UTC timestamps, no duplicate intervals, every day complete, no gaps. Price spikes are flagged but never removed. Every check passed. The flags are the expected ones: spikes in the top 0.1% of intervals, and day-ahead prices moving from hourly to 15-minute steps on 1 October 2025. They are listed in `data_quality` in summary.json.
 3. **Tidy** the data into one table of prices in CET, the time zone the market days use. FCR prices are hourly; day-ahead prices keep their 15-minute steps.
-4. **Calculate revenue** for each strategy. FCR: price × MW offered, every hour, where the MW offered is the largest bid Fingrid's rules allow for this battery. Arbitrage: the best charge-then-discharge cycle of each day (see [How a battery makes money](#how-a-battery-makes-money)).
+4. **Calculate revenue** for each strategy. FCR: price × MW offered, every hour, where the MW offered is the largest bid Fingrid's rules allow for this battery. Arbitrage: the best charge-then-discharge cycle of each day. FCR-D + one trade: FCR-D in every hour but the best charge hour and sell hour (see [How a battery makes money](#how-a-battery-makes-money)).
 5. **Summarise** by day, month and year, and write the CSV, the JSON and the charts.
 
 One command rebuilds everything from an empty `data/` folder. All inputs (periods, battery size, efficiency, availability) are in [params.toml](params.toml), each with the reason for its value.
@@ -43,7 +44,8 @@ One command rebuilds everything from an empty `data/` folder. All inputs (period
 
 These numbers show where the money **is** in the market, not what a real project would earn. A real battery earns less, because:
 
-- **No perfect foresight.** Bids are placed before prices are known, so a real operator won't always pick the better product, or the best trading hours. The daily best-of and the arbitrage figures are upper bounds.
+- **No perfect foresight.** Bids are placed before prices are known, so a real operator won't always pick the better product, or the best trading hours. The trading figures and the daily best-of assume perfect hindsight.
+- **Only these schedules.** The daily best-of is the best of the modelled strategies, not of every possible schedule. Splitting the battery's power between FCR and trading, or more than one trade a day, is not modelled.
 - **100% availability.** Maintenance and outages are not modelled. Set `availability` in params.toml for a scenario.
 - **No bidding strategy.** The model assumes every bid is accepted at the clearing price. A real bid can be rejected, or set the price itself.
 - **No degradation, fees or tariffs.** Battery wear, grid fees and market fees are not deducted.
@@ -96,7 +98,8 @@ revenue (EUR) = 0.88 MWh × average sell price − 1 MWh × average buy price
 1. **FCR-N only:** 0.5 MW of FCR-N every hour.
 2. **FCR-D up + down:** 0.833 MW of each, every hour.
 3. **Day-ahead arbitrage:** one charge and one discharge per day, at the best prices of that day.
-4. **Daily best-of:** the best of the above for each day. This is an upper bound, because it assumes perfect foresight.
+4. **FCR-D + one trade:** FCR-D in every hour except one charge hour and one later sell hour. The trade is sized so FCR-D keeps its Table 10 energy reserve in every other hour: a 1 MWh battery offering 0.833 MW of FCR-D must hold 20 minutes of it (0.278 MWh) in each direction, which leaves 1 − 2 × 0.278 = 0.444 MWh to trade. The battery trades only on days when the trade earns more than the FCR-D income it gives up in those two hours.
+5. **Daily best-of:** the best of the above for each day, with perfect hindsight. It is a ceiling for these strategies, not for every possible schedule.
 
 ### Market context
 

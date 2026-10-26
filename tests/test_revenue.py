@@ -131,6 +131,44 @@ def test_best_of_picks_daily_maximum() -> None:
     assert out["best_strategy"].tolist() == ["fcr_n", "fcr_d_stacked"]
 
 
+def test_trade_room_keeps_fcr_d_energy_reserve() -> None:
+    # 1 MWh battery, 0.833 MW FCR-D: 20 min x 0.833 MW = 0.278 MWh kept each way -> 0.444 left.
+    assert revenue.trade_room_mwh(1.0, 1 / 1.2) == pytest.approx(1 - 2 * (1 / 1.2) / 3)
+    assert revenue.trade_room_mwh(0.5, 1.0) == 0.0  # never negative
+
+
+def test_fcr_d_plus_trade_swaps_two_hours_when_it_pays() -> None:
+    # FCR-D pays 10 EUR every hour. Trade 0.5 MWh at 80%: buy at 20 (hour 0), sell at 200
+    # (hour 3): 0.8 x 0.5 x 200 - 0.5 x 20 = 70, minus 2 x 10 FCR-D given up = +50.
+    idx = hours("2026-01-01", 4)
+    fcr = pd.Series([10.0] * 4, index=idx)
+    da = pd.Series([20.0, 50.0, 50.0, 200.0], index=idx)
+    assert revenue.fcr_d_plus_trade(fcr, da, 0.5, 0.8).tolist() == pytest.approx([40 + 50])
+
+
+def test_fcr_d_plus_trade_stays_in_fcr_when_trade_does_not_pay() -> None:
+    idx = hours("2026-01-01", 4)
+    fcr = pd.Series([100.0] * 4, index=idx)  # FCR-D income beats any trade
+    da = pd.Series([20.0, 50.0, 50.0, 200.0], index=idx)
+    assert revenue.fcr_d_plus_trade(fcr, da, 0.5, 0.8).tolist() == [400.0]
+
+
+def test_fcr_d_plus_trade_charges_before_selling() -> None:
+    # The cheap hour comes after the dear one, so no legal trade: FCR-D only.
+    idx = hours("2026-01-01", 2)
+    fcr = pd.Series([1.0, 1.0], index=idx)
+    da = pd.Series([200.0, 20.0], index=idx)
+    assert revenue.fcr_d_plus_trade(fcr, da, 0.5, 0.8).tolist() == [2.0]
+
+
+def test_hourly_mean_handles_the_repeated_autumn_hour() -> None:
+    # 2026-10-25: 00:00 and 01:00 UTC are both 02:00 local; they must stay two hours.
+    idx = pd.date_range("2026-10-25T00:00", periods=8, freq="15min", tz="UTC").tz_convert(CET)
+    out = revenue.hourly_mean(pd.Series([1.0] * 4 + [3.0] * 4, index=idx))
+    assert out.tolist() == [1.0, 3.0]
+    assert str(pd.DatetimeIndex(out.index).tz) == CET
+
+
 def test_quarterly_sums_and_counts_days() -> None:
     # 31 Mar is Q1, 1-2 Apr are Q2: Q1 = 10 EUR over 1 day, Q2 = 20 + 30 over 2 days, on 2 MW.
     idx = pd.to_datetime(["2026-03-31", "2026-04-01", "2026-04-02"])
