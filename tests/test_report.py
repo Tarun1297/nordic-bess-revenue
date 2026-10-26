@@ -45,6 +45,7 @@ def test_summary_headline_and_trend_are_hand_checkable() -> None:
     assert s["change_first_3_to_last_3_months_pct"]["fcr_n"] == pytest.approx(2.2)
     # Bids for 1 MW / 1 MWh, and what nameplate 1 MW would have paid: 1825 / 0.5 = 3650.
     assert s["bids_mw"] == {"fcr_n": 0.5, "fcr_d_up_and_down_each": 0.833}
+    assert s["fcr_d_plus_trade_mwh"] == 0.444  # 1 - 2 x (0.833 MW x 20 min)
     assert s["nameplate_bid_sensitivity_eur_per_mw_year"]["fcr_n"] == 3650
     assert s["data_quality"] == ["all checks passed"]
 

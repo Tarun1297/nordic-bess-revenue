@@ -159,6 +159,8 @@ def build_summary(
             "availability": params.availability,
         },
         "bids_mw": {"fcr_n": round(fcr_n_mw, 3), "fcr_d_up_and_down_each": round(fcr_d_mw, 3)},
+        # Energy the FCR-D + one trade strategy can trade while keeping FCR-D's energy reserve.
+        "fcr_d_plus_trade_mwh": round(revenue.trade_room_mwh(params.energy_mwh, fcr_d_mw), 3),
         "annualised_eur_per_mw_year": {k: _eur(v) for k, v in annual.items()},
         # What the same prices would pay if the full nameplate MW could be bid (rules ignored).
         "nameplate_bid_sensitivity_eur_per_mw_year": {

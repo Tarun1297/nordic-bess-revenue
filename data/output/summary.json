@@ -15,6 +15,7 @@
     "fcr_n": 0.5,
     "fcr_d_up_and_down_each": 0.833
   },
+  "fcr_d_plus_trade_mwh": 0.444,
   "annualised_eur_per_mw_year": {
     "fcr_n": 39831,
     "fcr_d_stacked": 53215,
