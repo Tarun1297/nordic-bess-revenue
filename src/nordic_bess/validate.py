@@ -90,16 +90,34 @@ def check_daily_coverage(df: pd.DataFrame) -> CheckResult:
 def check_missing_intervals(
     df: pd.DataFrame, start_utc: pd.Timestamp, end_utc: pd.Timestamp
 ) -> CheckResult:
-    """List intervals in [start_utc, end_utc) that are absent or have no value, by UTC date."""
+    """List intervals in [start_utc, end_utc) that are absent or have no value, by UTC date.
+
+    Gaps are found from each row's own interval (a row ends, the next should start there), so a
+    series that changes resolution, like day-ahead prices going from 1 h to 15 min, is checked
+    against its real step on both sides of the change. A gap is counted in steps of the row
+    before it; a null value counts as one missing interval.
+    """
     start, end = _times(df)
-    step = (end - start).mode().iloc[0]
-    expected = pd.date_range(start_utc, end_utc, freq=step, inclusive="left")
+    order = start.sort_values().index
+    start, end = start[order], end[order]
+    step = end - start
+    # Edges first: the span should start and end exactly where the requested period does.
+    gaps = [
+        (start_utc, start.iloc[0], step.iloc[0]),
+        *zip(end.iloc[:-1], start.iloc[1:], step.iloc[:-1], strict=True),
+        (end.iloc[-1], end_utc, step.iloc[-1]),
+    ]
+    missing = [
+        g_start + i * s
+        for g_start, g_end, s in gaps
+        if g_end > g_start
+        for i in range(int((g_end - g_start) / s))
+    ]
     # A row with a null value is as unusable as no row, so both count as missing.
-    present = pd.DatetimeIndex(start[df["value"].notna()])
-    missing = expected.difference(present)
-    by_date = pd.Series(missing.date).value_counts().sort_index()
-    detail = "none" if missing.empty else "; ".join(f"{d}: {c}" for d, c in by_date.items())
-    return CheckResult("no_missing_intervals", missing.empty, len(missing), detail)
+    missing += list(start[df.loc[order, "value"].isna().to_numpy()])
+    by_date = pd.Series([m.date() for m in missing]).value_counts().sort_index()
+    detail = "none" if not missing else "; ".join(f"{d}: {c}" for d, c in by_date.items())
+    return CheckResult("no_missing_intervals", not missing, len(missing), detail)
 
 
 def check_outliers(df: pd.DataFrame, quantile: float = config.OUTLIER_QUANTILE) -> CheckResult:

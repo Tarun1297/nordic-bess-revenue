@@ -1,4 +1,4 @@
-"""Raw dataset rows to one tidy hourly CET table: timestamp_cet, product, price, unit (Silver)."""
+"""Raw dataset rows to one tidy CET table: timestamp_cet, product, price, unit (Silver)."""
 
 import logging
 
@@ -12,9 +12,11 @@ COLUMNS = ["timestamp_cet", "product", "price", "unit"]
 HOUR = pd.Timedelta(hours=1)
 
 
-def tidy(raw: pd.DataFrame, product: str, unit: str) -> pd.DataFrame:
-    """Turn raw API rows for one product into the tidy schema, hourly, in market time (CET).
+def tidy(raw: pd.DataFrame, product: str, unit: str, hourly: bool = True) -> pd.DataFrame:
+    """Turn raw API rows for one product into the tidy schema, in market time (CET).
 
+    `hourly=True` averages any sub-hourly rows into hours (FCR, priced per hour). Day-ahead
+    prices pass `hourly=False` and keep their 15-minute steps, so arbitrage can use them.
     Raw rows are UTC (as the API returns them). Hourly averaging happens in UTC first, because
     rounding to the hour in local time hits an ambiguous hour on the autumn DST change.
     """
@@ -29,7 +31,7 @@ def tidy(raw: pd.DataFrame, product: str, unit: str) -> pd.DataFrame:
             "unit": unit,
         }
     )
-    if (length < HOUR).any():
+    if hourly and (length < HOUR).any():
         df = _to_hourly(df, length)
     # Market time from here on: CET/CEST (Europe/Berlin), the calendar Fingrid's FCR market
     # days use. Still tz-aware, so the repeated autumn hour stays unambiguous.

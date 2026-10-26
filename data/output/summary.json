@@ -18,7 +18,8 @@
   "annualised_eur_per_mw_year": {
     "fcr_n": 39831,
     "fcr_d_stacked": 53215,
-    "best_of": 57266
+    "arbitrage": 21038,
+    "best_of": 57834
   },
   "nameplate_bid_sensitivity_eur_per_mw_year": {
     "fcr_n": 79663,
@@ -33,9 +34,13 @@
       "month": "2025-10",
       "eur_per_mw": 8344
     },
+    "arbitrage": {
+      "month": "2026-02",
+      "eur_per_mw": 2979
+    },
     "best_of": {
       "month": "2025-10",
-      "eur_per_mw": 8344
+      "eur_per_mw": 8489
     }
   },
   "worst_month": {
@@ -47,50 +52,61 @@
       "month": "2025-12",
       "eur_per_mw": 2827
     },
+    "arbitrage": {
+      "month": "2026-07",
+      "eur_per_mw": 398
+    },
     "best_of": {
       "month": "2025-12",
-      "eur_per_mw": 2827
+      "eur_per_mw": 2874
     }
   },
   "change_first_3_to_last_3_months_pct": {
     "fcr_n": 5.6,
     "fcr_d_stacked": -42.5,
-    "best_of": -33.1
+    "arbitrage": -25.7,
+    "best_of": -33.7
   },
   "days_won_by_strategy": {
-    "fcr_d_stacked": 280,
-    "fcr_n": 85
+    "fcr_d_stacked": 266,
+    "fcr_n": 83,
+    "arbitrage": 16
   },
   "trend": {
     "calendar_year_annualised_eur_per_mw_year": {
       "2022": {
         "fcr_n": 156943,
         "fcr_d_stacked": 273032,
-        "best_of": 304144,
+        "arbitrage": 59328,
+        "best_of": 306616,
         "days": 365
       },
       "2023": {
         "fcr_n": 206299,
         "fcr_d_stacked": 319876,
-        "best_of": 346660,
+        "arbitrage": 20923,
+        "best_of": 346742,
         "days": 365
       },
       "2024": {
         "fcr_n": 200676,
         "fcr_d_stacked": 247274,
-        "best_of": 287734,
+        "arbitrage": 23816,
+        "best_of": 287976,
         "days": 366
       },
       "2025": {
         "fcr_n": 80071,
         "fcr_d_stacked": 163188,
-        "best_of": 167374,
+        "arbitrage": 25116,
+        "best_of": 167572,
         "days": 365
       },
       "2026": {
         "fcr_n": 40080,
         "fcr_d_stacked": 47882,
-        "best_of": 53152,
+        "arbitrage": 20927,
+        "best_of": 53655,
         "days": 273
       }
     },
@@ -98,32 +114,37 @@
       "2022": {
         "fcr_n": 132135,
         "fcr_d_stacked": 239041,
-        "best_of": 268683
+        "arbitrage": 63096,
+        "best_of": 271989
       },
       "2023": {
         "fcr_n": 214299,
         "fcr_d_stacked": 347691,
-        "best_of": 374157
+        "arbitrage": 19519,
+        "best_of": 374267
       },
       "2024": {
         "fcr_n": 219301,
         "fcr_d_stacked": 262511,
-        "best_of": 306116
+        "arbitrage": 23068,
+        "best_of": 306434
       },
       "2025": {
         "fcr_n": 93881,
         "fcr_d_stacked": 194916,
-        "best_of": 200367
+        "arbitrage": 26380,
+        "best_of": 200375
       },
       "2026": {
         "fcr_n": 40080,
         "fcr_d_stacked": 47882,
-        "best_of": 53152
+        "arbitrage": 20927,
+        "best_of": 53655
       }
     },
     "ytd_window": "1 Jan to 30 Sep of each year",
     "peak_full_year": "2023",
-    "headline_vs_peak_pct": -83.5
+    "headline_vs_peak_pct": -83.3
   },
   "data_quality": [
     {
@@ -143,6 +164,18 @@
       "check": "outliers_flagged",
       "rows": 39,
       "detail": "threshold 220.00; top: 285.0 at 2022-09-17T01:00:00.000Z, 285.0 at 2022-09-17T02:00:00.000Z, 275.0 at 2024-04-07T00:00:00.000Z"
+    },
+    {
+      "product": "day_ahead",
+      "check": "single_resolution",
+      "rows": 33598,
+      "detail": "0 days 00:15:00: 35048 rows, 0 days 01:00:00: 33598 rows"
+    },
+    {
+      "product": "day_ahead",
+      "check": "outliers_flagged",
+      "rows": 69,
+      "detail": "threshold 649.33; top: 1896.0 at 2024-01-05T17:00:00.000Z, 1758.0 at 2024-01-05T15:00:00.000Z, 1754.0 at 2024-01-05T18:00:00.000Z"
     }
   ],
   "assumptions": [
@@ -151,9 +184,17 @@
     "Capacity payments only; activated-energy settlement is not modelled.",
     "Perfect foresight for the daily best-of; no bidding risk.",
     "Availability 100%; no degradation, fees or grid tariffs.",
-    "Day-ahead arbitrage not included yet (needs ENTSO-E data)."
+    "Day-ahead arbitrage: one cycle a day, buying 1 MWh in a 1-hour block and selling 0.88 MWh in a later block (15-minute prices from 1 Oct 2025, hourly before)."
   ],
   "sources": [
+    {
+      "name": "ENTSO-E Transparency Platform: day-ahead prices, Finland (article 12.1.D)",
+      "url": "https://transparency.entsoe.eu/"
+    },
+    {
+      "name": "ENTSO-E Restful API integration guide",
+      "url": "https://transparencyplatform.zendesk.com/hc/en-us/articles/15692855254548-Sitemap-for-Restful-API-Integration"
+    },
     {
       "name": "Fingrid open data: FCR-N hourly market prices (dataset 317)",
       "url": "https://data.fingrid.fi/en/datasets/317"

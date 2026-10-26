@@ -56,33 +56,57 @@ def test_fcr_d_stacks_up_and_down() -> None:
     assert revenue.fcr_d_stacked(wide([0, 0], [4, 6], [1, 2]), 0.5).tolist() == [2.5, 4.0]
 
 
+def quarters(start: str, n: int) -> pd.DatetimeIndex:
+    return pd.date_range(start, periods=n, freq="15min", tz=CET)
+
+
 def test_arbitrage_charge_must_precede_discharge() -> None:
-    # Cheapest hour (10) comes last, so it cannot be used. Best legal pair: charge at 50, sell at
-    # 100 -> 100 - 50 / 0.88 = 43.1818...
+    # Hourly, 1 MW / 1 MWh: the cheapest hour (10) comes last, so it can't be used. Best legal
+    # pair: buy 1 MWh at 50, sell 0.88 MWh at 100 -> 0.88 x 100 - 50 = 38.
     p = pd.Series([50.0, 100.0, 10.0], index=hours("2026-01-01", 3))
-    out = revenue.arbitrage(p, 1.0, 0.88)
-    assert out.tolist() == pytest.approx([-50 / 0.88, 100.0, 0.0])
-    assert out.sum() == pytest.approx(43.1818, abs=1e-4)
+    assert revenue.arbitrage(p, 1.0, 1.0, 0.88).tolist() == pytest.approx([38.0])
 
 
 def test_arbitrage_profits_from_negative_charge_price() -> None:
-    # Paid 20 to charge, sell at 30 -> 30 + 20 / 0.88 = 52.7273
+    # Paid 20 to take 1 MWh, sell 0.88 MWh at 30 -> 26.4 + 20 = 46.4.
     p = pd.Series([-20.0, 30.0], index=hours("2026-01-01", 2))
-    assert revenue.arbitrage(p, 1.0, 0.88).sum() == pytest.approx(52.7273, abs=1e-4)
+    assert revenue.arbitrage(p, 1.0, 1.0, 0.88).tolist() == pytest.approx([46.4])
 
 
 def test_arbitrage_skips_unprofitable_day() -> None:
-    # Falling prices: best pair 90 then 80 loses money, so no trade.
+    # Falling prices: the best legal pair (90 then 80) loses money, so no trade.
     p = pd.Series([100.0, 90.0, 80.0], index=hours("2026-01-01", 3))
-    assert (revenue.arbitrage(p, 1.0, 0.88) == 0).all()
+    assert revenue.arbitrage(p, 1.0, 1.0, 0.88).tolist() == [0.0]
 
 
-def test_arbitrage_one_cycle_per_day() -> None:
-    # Two days; each trades once on its own prices: day 1: 60 - 30/0.88, day 2: 40 - 10/0.88.
+def test_arbitrage_one_cycle_per_market_day() -> None:
+    # 22:00 and 23:00 CET on 1 Jan, then 00:00 and 01:00 on 2 Jan: two days, one cycle each.
     p = pd.Series([30.0, 60.0, 10.0, 40.0], index=hours("2026-01-01T22:00", 4))
-    # Hours 22,23 CET on 1 Jan; 00,01 CET on 2 Jan.
-    daily = revenue.arbitrage(p, 1.0, 0.88).groupby(p.index.date).sum()
-    assert daily.tolist() == pytest.approx([60 - 30 / 0.88, 40 - 10 / 0.88])
+    out = revenue.arbitrage(p, 1.0, 1.0, 0.88)
+    assert out.index.tolist() == [pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-02")]
+    assert out.tolist() == pytest.approx([0.88 * 60 - 30, 0.88 * 40 - 10])  # 22.8, 25.2
+
+
+def test_arbitrage_on_quarter_hours_uses_one_hour_blocks() -> None:
+    # 15-minute prices: a 1 MW / 1 MWh battery charges for 4 quarters, then sells for 4.
+    # Charge block 10,10,20,20 (avg 15), sell block 50,60,70,80 (avg 65): 0.88 x 65 - 15 = 42.2.
+    p = pd.Series([10.0, 10.0, 20.0, 20.0, 50.0, 60.0, 70.0, 80.0], index=quarters("2026-01-01", 8))
+    assert revenue.arbitrage(p, 1.0, 1.0, 0.88).tolist() == pytest.approx([42.2])
+
+
+def test_arbitrage_blocks_never_overlap() -> None:
+    # A single cheap quarter (0) next to a single dear one (100) can't be used: each leg needs a
+    # full hour. Best non-overlapping blocks: buy 0,40,40,40 (avg 30), sell 100,40,40,40 (avg 55)
+    # -> 0.88 x 55 - 30 = 18.4.
+    p = pd.Series([0.0, 40.0, 40.0, 40.0, 100.0, 40.0, 40.0, 40.0], index=quarters("2026-01-01", 8))
+    assert revenue.arbitrage(p, 1.0, 1.0, 0.88).tolist() == pytest.approx([18.4])
+
+
+def test_arbitrage_two_hour_battery_uses_two_hour_blocks() -> None:
+    # 1 MW / 2 MWh, hourly: buy 2 MWh over hours 1-2 (avg 15), sell 1.76 MWh over hours 3-4
+    # (avg 75): 2 x 0.88 x 75 - 2 x 15 = 102.
+    p = pd.Series([10.0, 20.0, 70.0, 80.0], index=hours("2026-01-01", 4))
+    assert revenue.arbitrage(p, 1.0, 2.0, 0.88).tolist() == pytest.approx([102.0])
 
 
 def test_daily_drops_partial_day_and_keeps_dst_day(caplog: pytest.LogCaptureFixture) -> None:

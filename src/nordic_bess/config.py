@@ -108,3 +108,10 @@ FINGRID_DATASETS: dict[int, str] = {
     318: "fcr_d_up",
     283: "fcr_d_down",
 }
+
+# Day-ahead prices (ENTSO-E article 12.1.D, EUR/MWh) for arbitrage. Finland is one bidding zone,
+# so the country code is the zone (EIC 10YFI-1--------U). Hourly until 30 Sep 2025, 15 minutes
+# from 1 Oct 2025 when the European day-ahead market (SDAC) moved to a 15-minute time unit.
+ENTSOE_AREA = "FI"
+DAY_AHEAD = "day_ahead"
+DAY_AHEAD_UNIT = "EUR/MWh"

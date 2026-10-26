@@ -72,6 +72,25 @@ def test_missing_intervals_fail_on_gap_and_null() -> None:
     assert "2026-03-29: 1" in result.detail and "2026-03-30: 1" in result.detail
 
 
+def test_missing_intervals_counts_gap_in_steps_of_the_row_before() -> None:
+    # Hourly to 01:00, then quarter-hours from 02:00: the 01:00-02:00 hour is missing (1 step).
+    starts = pd.DatetimeIndex(["2026-01-01 00:00"], tz="UTC").append(
+        pd.date_range("2026-01-01 02:00", periods=4, freq="15min", tz="UTC")
+    )
+    lengths = [pd.Timedelta(hours=1)] + [pd.Timedelta(minutes=15)] * 4
+    df = pd.DataFrame(
+        {
+            "startTime": starts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "endTime": (starts + pd.TimedeltaIndex(lengths)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "value": 1.0,
+        }
+    )
+    result = validate.check_missing_intervals(
+        df, pd.Timestamp("2026-01-01", tz="UTC"), pd.Timestamp("2026-01-01 03:00", tz="UTC")
+    )
+    assert not result.passed and result.rows_affected == 1
+
+
 def test_outliers_pass_on_flat_prices() -> None:
     df = sample().assign(value=10.0)
     assert validate.check_outliers(df).passed

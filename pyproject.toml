@@ -19,7 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Kept separate so the pipeline installs and runs before the ENTSO-E key arrives (phase 8).
-entsoe = ["entsoe-py>=0.6"]
+entsoe = ["entsoe-py>=0.8.1,<0.9"]  # 0.8.x: 15-minute SDAC handling this code relies on
 dev = [
     "pytest>=8",
     "ruff==0.17.2",  # pinned to the pre-commit rev so local, hook and CI formatting agree

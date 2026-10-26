@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from nordic_bess import config, report, revenue, transform, validate
-from nordic_bess.sources import fingrid
+from nordic_bess.sources import entsoe, fingrid
 
 log = logging.getLogger(__name__)
 
@@ -30,20 +30,35 @@ def raw_span_utc(params: config.Params) -> tuple[pd.Timestamp, pd.Timestamp]:
     return pd.Timestamp(first_month, tz="UTC"), pd.Timestamp(after_last, tz="UTC")
 
 
-def extract(params: config.Params, refresh: bool) -> None:
-    """Download raw Fingrid months covering the trend period (skips months already on disk)."""
+def raw_sources(with_day_ahead: bool) -> dict[str, Callable[[], pd.DataFrame]]:
+    """Every raw dataset by product name, with the function that loads it from data/raw/."""
+    sources: dict[str, Callable[[], pd.DataFrame]] = {
+        name: partial(fingrid.load_raw, dataset_id)
+        for dataset_id, name in config.FINGRID_DATASETS.items()
+    }
+    if with_day_ahead:
+        sources[config.DAY_AHEAD] = entsoe.load_raw
+    return sources
+
+
+def extract(params: config.Params, refresh: bool, entsoe_key: str | None) -> None:
+    """Download raw months covering the trend period (skips months already on disk)."""
     start, end = raw_span_utc(params)
     last = (end - pd.Timedelta(days=1)).date()
     fingrid.download(list(config.FINGRID_DATASETS), start.date(), last, refresh)
+    if entsoe_key:
+        entsoe.download(entsoe_key, start.date(), last, refresh)
 
 
-def validate_raw(params: config.Params) -> dict[str, list[validate.CheckResult]]:
+def validate_raw(
+    params: config.Params, with_day_ahead: bool
+) -> dict[str, list[validate.CheckResult]]:
     """Validate every raw dataset, log a summary, and raise if any critical check failed."""
     # Validate whole UTC months so every UTC day in the span is complete by construction.
     start_utc, end_utc = raw_span_utc(params)
     report = {}
-    for dataset_id, name in config.FINGRID_DATASETS.items():
-        raw = fingrid.load_raw(dataset_id)
+    for name, load in raw_sources(with_day_ahead).items():
+        raw = load()
         # Raw files may hold more months than this run asks for; check only the requested span.
         starts = pd.to_datetime(raw["startTime"], utc=True, format="ISO8601")
         results = validate.run_checks(
@@ -74,15 +89,21 @@ def validate_raw(params: config.Params) -> dict[str, list[validate.CheckResult]]
     return report
 
 
-def transform_raw() -> pd.DataFrame:
-    """Build data/clean/prices.parquet: one tidy hourly UTC table across all products."""
-    prices = pd.concat(
-        [
-            transform.tidy(fingrid.load_raw(dataset_id), product, config.FCR_UNIT)
-            for dataset_id, product in config.FINGRID_DATASETS.items()
-        ],
-        ignore_index=True,
-    )
+def transform_raw(with_day_ahead: bool) -> pd.DataFrame:
+    """Build data/clean/prices.parquet: one tidy CET table across all products.
+
+    FCR prices are hourly. Day-ahead prices keep their own resolution (15 minutes from
+    1 Oct 2025), because arbitrage on 15-minute prices was the chosen method.
+    """
+    tables = [
+        transform.tidy(load(), name, config.FCR_UNIT)
+        for name, load in raw_sources(with_day_ahead=False).items()
+    ]
+    if with_day_ahead:
+        tables.append(
+            transform.tidy(entsoe.load_raw(), config.DAY_AHEAD, config.DAY_AHEAD_UNIT, hourly=False)
+        )
+    prices = pd.concat(tables, ignore_index=True)
     config.DATA_CLEAN.mkdir(parents=True, exist_ok=True)
     prices.to_parquet(config.DATA_CLEAN / "prices.parquet", index=False)
     log.info(
@@ -91,19 +112,37 @@ def transform_raw() -> pd.DataFrame:
     return prices
 
 
-def compute_revenue(params: config.Params) -> pd.DataFrame:
+def compute_revenue(params: config.Params, with_day_ahead: bool) -> pd.DataFrame:
     """Build data/clean/revenue_daily.parquet: EUR per market day for each strategy."""
     fcr_n_mw, fcr_d_mw = revenue.max_fcr_bids(params.power_mw, params.energy_mwh)
     log.info("compliant bids: FCR-N %.3f MW, FCR-D up+down %.3f MW each", fcr_n_mw, fcr_d_mw)
-    wide = revenue.to_wide(pd.read_parquet(config.DATA_CLEAN / "prices.parquet"))
+    prices = pd.read_parquet(config.DATA_CLEAN / "prices.parquet")
+    is_da = prices["product"] == config.DAY_AHEAD
+    wide = revenue.to_wide(prices[~is_da])
     # The index is CET, so date strings select whole market days directly.
     wide = wide.loc[str(params.trend_start) : str(params.end)]
     hourly = pd.concat(
         [revenue.fcr_n_only(wide, fcr_n_mw), revenue.fcr_d_stacked(wide, fcr_d_mw)], axis=1
     )
-    log.info("day-ahead prices not loaded yet (phase 8): arbitrage strategy skipped")
+    days = revenue.daily(hourly)
+    if with_day_ahead:
+        da = prices[is_da].set_index("timestamp_cet")["price"].sort_index()
+        da = da.loc[str(params.trend_start) : str(params.end)]
+        arb = revenue.arbitrage(
+            da, params.power_mw, params.energy_mwh, params.round_trip_efficiency
+        )
+        days = days.join(arb, how="left")
+        missing = int(days["arbitrage"].isna().sum())
+        if missing:
+            # Rule 6: a day without day-ahead prices earns nothing from arbitrage; say how many.
+            log.warning(
+                "%d market day(s) have no day-ahead prices; arbitrage counted as 0", missing
+            )
+            days["arbitrage"] = days["arbitrage"].fillna(0.0)
+    else:
+        log.info("ENTSOE_API_KEY not set: day-ahead arbitrage skipped")
     # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.
-    days = revenue.best_of(revenue.daily(hourly) * params.availability)
+    days = revenue.best_of(days * params.availability)
     days.to_parquet(config.DATA_CLEAN / "revenue_daily.parquet")
     headline = days.loc[str(params.start) : str(params.end)]
     for strategy, eur in revenue.annualised(headline, params.power_mw).items():
@@ -138,10 +177,13 @@ def main() -> None:
             parser.error("need trend_start <= --start <= --end")
     log.info("inputs: %s", params)
 
-    timed("extract", partial(extract, params, args.refresh))
-    quality = timed("validate", partial(validate_raw, params))
-    prices = timed("transform", transform_raw)
-    days = timed("revenue", partial(compute_revenue, params))
+    # The pipeline runs without the ENTSO-E key; arbitrage is then skipped with a log line.
+    entsoe_key = entsoe.api_key()
+    with_da = entsoe_key is not None
+    timed("extract", partial(extract, params, args.refresh, entsoe_key))
+    quality = timed("validate", partial(validate_raw, params, with_da))
+    prices = timed("transform", partial(transform_raw, with_da))
+    days = timed("revenue", partial(compute_revenue, params, with_da))
     timed("report", partial(report.write_outputs, days, prices, params, quality))
 
 

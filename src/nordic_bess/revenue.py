@@ -59,34 +59,40 @@ def fcr_d_stacked(wide: pd.DataFrame, bid_mw: float) -> pd.Series:
     return ((wide["fcr_d_up"] + wide["fcr_d_down"]) * bid_mw).rename("fcr_d_stacked")
 
 
-def arbitrage(day_ahead: pd.Series, energy_mwh: float, efficiency: float) -> pd.Series:
-    """Hourly EUR from one perfect-foresight charge/discharge cycle per market day.
+def arbitrage(
+    day_ahead: pd.Series, power_mw: float, energy_mwh: float, efficiency: float
+) -> pd.Series:
+    """EUR per market day from one perfect-foresight charge/discharge cycle on day-ahead prices.
 
-    The index must be tz-aware market time: its calendar date defines the market day.
-
-    For each day, pick the charge hour c and later discharge hour d that maximise
-    p_d * E - p_c * E / efficiency; trade only if that is positive. This equals "cheapest hour
-    then most expensive hour" whenever the cheapest hour comes first, and otherwise finds the
-    best pair that respects the charge-before-discharge order. The cost is booked in the
-    charge hour (negative) and the income in the discharge hour, so daily sums are exact.
+    The battery charges at full power for energy/power hours, buying `energy_mwh`, and later
+    sells the `energy_mwh * efficiency` it stored over a block of the same length. A block is a
+    run of consecutive price intervals (four 15-minute prices, or one hourly price before
+    1 Oct 2025), priced at its average. The charge block must end before the discharge block
+    starts, and the day trades only if the gain is positive. The index must be tz-aware market
+    time: its calendar date is the market day.
     """
-    out = pd.Series(0.0, index=day_ahead.index, name="arbitrage")
-    day = pd.DatetimeIndex(day_ahead.index).date
-    for _, p in day_ahead.groupby(day):
-        prices = p.to_numpy()
-        if len(prices) < 2:
+    duration = pd.Timedelta(hours=energy_mwh / power_mw)
+    out: dict[object, float] = {}
+    idx = pd.DatetimeIndex(day_ahead.index)
+    for day, p in day_ahead.groupby(idx.date):
+        # One resolution per day: the 15-minute switch happened at a market-day boundary.
+        step = pd.Series(pd.DatetimeIndex(p.index)).diff().min()
+        k = max(1, round(duration / step)) if pd.notna(step) else 1
+        prices = p.to_numpy(dtype=float)
+        if len(prices) < 2 * k:
+            out[day] = 0.0
             continue
-        # Cheapest price strictly before each hour: the best charge hour for discharging there.
-        # Dividing by efficiency is monotonic, so the cheapest price is still the cheapest cost.
-        best_before = np.minimum.accumulate(prices)[:-1]
-        gain = prices[1:] * energy_mwh - best_before * energy_mwh / efficiency
-        d = int(np.argmax(gain)) + 1
-        if gain[d - 1] <= 0:
-            continue
-        c = int(np.argmin(prices[:d]))
-        out[p.index[c]] = -prices[c] * energy_mwh / efficiency
-        out[p.index[d]] = prices[d] * energy_mwh
-    return out
+        # Average price of the block starting at each interval.
+        block = np.convolve(prices, np.ones(k) / k, mode="valid")
+        # For a discharge block starting at j, the cheapest charge block must start at j-k or
+        # earlier, so it ends before discharging begins.
+        cheapest_charge = np.minimum.accumulate(block)[: len(block) - k]
+        gain = energy_mwh * efficiency * block[k:] - energy_mwh * cheapest_charge
+        out[day] = max(float(gain.max()), 0.0)
+    result = pd.Series(out, name="arbitrage", dtype=float)
+    result.index = pd.to_datetime(result.index)
+    result.index.name = "market_day"
+    return result
 
 
 def daily(hourly: pd.DataFrame) -> pd.DataFrame:

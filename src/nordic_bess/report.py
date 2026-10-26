@@ -17,10 +17,19 @@ from nordic_bess import config, revenue, validate  # noqa: E402
 
 log = logging.getLogger(__name__)
 
-STRATEGIES = ["fcr_n", "fcr_d_stacked", "best_of"]
+# Arbitrage appears only when day-ahead prices were loaded (ENTSO-E key set).
+ALL_STRATEGIES = ["fcr_n", "fcr_d_stacked", "arbitrage", "best_of"]
+
+
+def strategies(days: pd.DataFrame) -> list[str]:
+    """Strategy columns present in the daily table, in a fixed reporting order."""
+    return [s for s in ALL_STRATEGIES if s in days.columns]
+
+
 LABELS = {
     "fcr_n": "FCR-N",
     "fcr_d_stacked": "FCR-D up + down",
+    "arbitrage": "Day-ahead arbitrage",
     "best_of": "Daily best-of (upper bound)",
     "fcr_d_up": "FCR-D up",
     "fcr_d_down": "FCR-D down",
@@ -28,6 +37,7 @@ LABELS = {
 # Colour follows the entity in every chart: FCR-N is always blue, the FCR-D family orange,
 # FCR-D down aqua. Validated for colour-blind separation (dataviz validate_palette.js, light).
 COLORS = {
+    "arbitrage": "#6250d6",
     "fcr_n": "#2a78d6",
     "fcr_d_stacked": "#eb6834",
     "fcr_d_up": "#eb6834",
@@ -36,6 +46,14 @@ COLORS = {
 SURFACE, INK, INK_2, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9"
 
 SOURCES = [
+    {
+        "name": "ENTSO-E Transparency Platform: day-ahead prices, Finland (article 12.1.D)",
+        "url": "https://transparency.entsoe.eu/",
+    },
+    {
+        "name": "ENTSO-E Restful API integration guide",
+        "url": "https://transparencyplatform.zendesk.com/hc/en-us/articles/15692855254548-Sitemap-for-Restful-API-Integration",
+    },
     {
         "name": "Fingrid open data: FCR-N hourly market prices (dataset 317)",
         "url": "https://data.fingrid.fi/en/datasets/317",
@@ -58,7 +76,7 @@ SOURCES = [
     },
 ]
 SOURCE_NOTE = (
-    "Source: Fingrid open data (datasets 317, 318, 283), hourly-market FCR prices. "
+    "Source: Fingrid open data (FCR prices, datasets 317, 318, 283); ENTSO-E (day-ahead prices). "
     "Bids follow Fingrid Table 10 for a {power:g} MW / {energy:g} MWh battery."
 )
 
@@ -70,7 +88,7 @@ def _eur(x: float) -> int:
 
 def monthly_table(days: pd.DataFrame, power_mw: float) -> pd.DataFrame:
     """Monthly EUR/MW per strategy with a YYYY-MM month column, ready for CSV."""
-    m = revenue.monthly(days[STRATEGIES], power_mw).round(0).astype(int)
+    m = revenue.monthly(days[strategies(days)], power_mw).round(0).astype(int)
     m.index = m.index.astype(str)
     return m.rename_axis("month_cet").reset_index()
 
@@ -88,15 +106,15 @@ def build_summary(
     """Assemble summary.json: headline answer, trend, data quality, assumptions and sources."""
     fcr_n_mw, fcr_d_mw = revenue.max_fcr_bids(params.power_mw, params.energy_mwh)
     headline = days.loc[str(params.start) : str(params.end)]
-    annual = revenue.annualised(headline[STRATEGIES], params.power_mw)
-    months = revenue.monthly(headline[STRATEGIES], params.power_mw)
+    annual = revenue.annualised(headline[strategies(days)], params.power_mw)
+    months = revenue.monthly(headline[strategies(days)], params.power_mw)
     # Change from the first three to the last three months of the headline period.
     first3, last3 = months.iloc[:3].sum(), months.iloc[-3:].sum()
 
     idx = pd.DatetimeIndex(days.index)
     yearly = {
         str(year): {
-            k: _eur(v) for k, v in revenue.annualised(g[STRATEGIES], params.power_mw).items()
+            k: _eur(v) for k, v in revenue.annualised(g[strategies(days)], params.power_mw).items()
         }
         | {"days": len(g)}
         for year, g in days.groupby(idx.year)
@@ -104,7 +122,7 @@ def build_summary(
     ytd = days[_ytd_mask(idx, params.end)]
     ytd_yearly = {
         str(year): {
-            k: _eur(v) for k, v in revenue.annualised(g[STRATEGIES], params.power_mw).items()
+            k: _eur(v) for k, v in revenue.annualised(g[strategies(days)], params.power_mw).items()
         }
         for year, g in ytd.groupby(pd.DatetimeIndex(ytd.index).year)
     }
@@ -133,14 +151,14 @@ def build_summary(
         },
         "best_month": {
             s: {"month": str(months[s].idxmax()), "eur_per_mw": _eur(months[s].max())}
-            for s in STRATEGIES
+            for s in strategies(days)
         },
         "worst_month": {
             s: {"month": str(months[s].idxmin()), "eur_per_mw": _eur(months[s].min())}
-            for s in STRATEGIES
+            for s in strategies(days)
         },
         "change_first_3_to_last_3_months_pct": {
-            s: round((last3[s] / first3[s] - 1) * 100, 1) for s in STRATEGIES
+            s: round((last3[s] / first3[s] - 1) * 100, 1) for s in strategies(days)
         },
         "days_won_by_strategy": headline["best_strategy"].value_counts().to_dict(),
         "trend": {
@@ -165,7 +183,10 @@ def build_summary(
             "Capacity payments only; activated-energy settlement is not modelled.",
             "Perfect foresight for the daily best-of; no bidding risk.",
             f"Availability {params.availability:.0%}; no degradation, fees or grid tariffs.",
-            "Day-ahead arbitrage not included yet (needs ENTSO-E data).",
+            f"Day-ahead arbitrage: one cycle a day, buying {params.energy_mwh:g} MWh in a "
+            f"{params.energy_mwh / params.power_mw:g}-hour block and selling "
+            f"{params.energy_mwh * params.round_trip_efficiency:g} MWh in a later block "
+            "(15-minute prices from 1 Oct 2025, hourly before).",
         ],
         "sources": SOURCES,
     }
@@ -195,7 +216,7 @@ def _legend_top(ax: Any) -> None:
     ax.legend(
         loc="lower left",
         bbox_to_anchor=(0, 1.01),
-        ncols=3,
+        ncols=len(ax.get_legend_handles_labels()[1]),  # one row, never over the subtitle
         frameon=False,
         fontsize=9,
         labelcolor=INK_2,
@@ -225,7 +246,7 @@ def chart_monthly(
     days: pd.DataFrame, summary: dict[str, Any], params: config.Params, path: Path
 ) -> None:
     """Lines of monthly revenue per strategy across the whole trend window."""
-    m = revenue.monthly(days[STRATEGIES], params.power_mw)
+    m = revenue.monthly(days[strategies(days)], params.power_mw)
     periods = pd.PeriodIndex(m.index)
     # Months plotted by position: evenly spaced, and no date-axis conversion needed.
     x = list(range(len(m)))
@@ -234,7 +255,7 @@ def chart_monthly(
     trend = summary["trend"]
     _style(
         ax,
-        f"FCR revenue is down {-trend['headline_vs_peak_pct']:.0f}% "
+        f"Battery revenue is down {-trend['headline_vs_peak_pct']:.0f}% "
         f"from its {trend['peak_full_year']} peak",
         f"Monthly revenue, EUR per MW, {params.power_mw:g} MW / {params.energy_mwh:g} MWh battery, "
         "market time (CET)",
@@ -243,7 +264,7 @@ def chart_monthly(
     first = list(periods).index(pd.Period(params.start, "M"))
     last = list(periods).index(pd.Period(params.end, "M"))
     ax.axvspan(first - 0.5, last + 0.5, color=GRID, alpha=0.45, lw=0)
-    for s in STRATEGIES:
+    for s in strategies(days):
         best = s == "best_of"
         ax.plot(
             x,
@@ -266,7 +287,7 @@ def chart_monthly(
         va="top",
     )
     # Direct labels at the line ends, so identity never rests on colour alone.
-    _end_labels(ax, x[-1] + 1, {k: float(m[k].iloc[-1]) for k in STRATEGIES})
+    _end_labels(ax, x[-1] + 1, {k: float(m[k].iloc[-1]) for k in strategies(days)})
     _legend_top(ax)
     _source(
         fig,
@@ -367,7 +388,9 @@ def write_outputs(
     # Stable key order and no generation timestamp, so re-runs on the same inputs diff clean.
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
     ts = prices["timestamp_cet"]
-    headline_prices = prices[(ts.dt.date >= params.start) & (ts.dt.date <= params.end)]
+    # Price charts are about the FCR products; day-ahead prices only feed arbitrage revenue.
+    fcr = prices["product"].isin(list(config.FINGRID_DATASETS.values()))
+    headline_prices = prices[fcr & (ts.dt.date >= params.start) & (ts.dt.date <= params.end)]
     chart_monthly(days, summary, params, charts / "monthly_revenue.png")
     chart_price_box(headline_prices, charts / "price_distribution.png")
     chart_daily_profile(headline_prices, charts / "daily_price_profile.png")

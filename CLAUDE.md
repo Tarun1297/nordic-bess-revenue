@@ -37,7 +37,7 @@ Python 3.12 is managed by `uv` (no system Python on this machine).
 
 ```bash
 uv venv --python 3.12 .venv            # once
-uv pip install -e ".[dev]"             # add ,entsoe for phase 8
+uv pip install -e ".[dev,entsoe]"      # entsoe-py is needed for day-ahead prices
 .venv/Scripts/pre-commit install       # once
 ```
 
