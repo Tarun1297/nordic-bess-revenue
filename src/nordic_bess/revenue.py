@@ -126,6 +126,17 @@ def monthly(days: pd.DataFrame, power_mw: float) -> pd.DataFrame:
     return numeric.groupby(pd.DatetimeIndex(numeric.index).to_period("M")).sum() / power_mw
 
 
+def quarterly(days: pd.DataFrame, power_mw: float) -> pd.DataFrame:
+    """Quarterly revenue per strategy in EUR per MW, with the number of days behind each sum.
+
+    The day count shows a partial quarter at the period edges, so it is never read as a
+    full quarter.
+    """
+    numeric = days.select_dtypes("number")
+    by_quarter = numeric.groupby(pd.DatetimeIndex(numeric.index).to_period("Q"))
+    return (by_quarter.sum() / power_mw).assign(days=by_quarter.size())
+
+
 def annualised(days: pd.DataFrame, power_mw: float) -> pd.Series:
     """Revenue per strategy scaled to EUR/MW/year from however many complete days exist."""
     numeric = days.select_dtypes("number")

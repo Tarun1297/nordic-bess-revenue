@@ -72,6 +72,142 @@
     "fcr_n": 83,
     "arbitrage": 16
   },
+  "quarterly_eur_per_mw": {
+    "2022Q1": {
+      "fcr_n": 20020,
+      "fcr_d_stacked": 44101,
+      "arbitrage": 9698,
+      "best_of": 45621,
+      "days": 90
+    },
+    "2022Q2": {
+      "fcr_n": 39464,
+      "fcr_d_stacked": 54037,
+      "arbitrage": 13313,
+      "best_of": 70616,
+      "days": 91
+    },
+    "2022Q3": {
+      "fcr_n": 39345,
+      "fcr_d_stacked": 80651,
+      "arbitrage": 24181,
+      "best_of": 87196,
+      "days": 92
+    },
+    "2022Q4": {
+      "fcr_n": 58113,
+      "fcr_d_stacked": 94243,
+      "arbitrage": 12135,
+      "best_of": 103184,
+      "days": 92
+    },
+    "2023Q1": {
+      "fcr_n": 27186,
+      "fcr_d_stacked": 30110,
+      "arbitrage": 5642,
+      "best_of": 35540,
+      "days": 90
+    },
+    "2023Q2": {
+      "fcr_n": 61460,
+      "fcr_d_stacked": 86667,
+      "arbitrage": 3247,
+      "best_of": 96296,
+      "days": 91
+    },
+    "2023Q3": {
+      "fcr_n": 71638,
+      "fcr_d_stacked": 143277,
+      "arbitrage": 5710,
+      "best_of": 148095,
+      "days": 92
+    },
+    "2023Q4": {
+      "fcr_n": 46016,
+      "fcr_d_stacked": 59822,
+      "arbitrage": 6324,
+      "best_of": 66811,
+      "days": 92
+    },
+    "2024Q1": {
+      "fcr_n": 47431,
+      "fcr_d_stacked": 61648,
+      "arbitrage": 6042,
+      "best_of": 66406,
+      "days": 91
+    },
+    "2024Q2": {
+      "fcr_n": 81024,
+      "fcr_d_stacked": 87542,
+      "arbitrage": 6391,
+      "best_of": 110452,
+      "days": 91
+    },
+    "2024Q3": {
+      "fcr_n": 36171,
+      "fcr_d_stacked": 47872,
+      "arbitrage": 4884,
+      "best_of": 53177,
+      "days": 92
+    },
+    "2024Q4": {
+      "fcr_n": 36600,
+      "fcr_d_stacked": 50889,
+      "arbitrage": 6565,
+      "best_of": 58730,
+      "days": 92
+    },
+    "2025Q1": {
+      "fcr_n": 28277,
+      "fcr_d_stacked": 47114,
+      "arbitrage": 6981,
+      "best_of": 49912,
+      "days": 90
+    },
+    "2025Q2": {
+      "fcr_n": 19963,
+      "fcr_d_stacked": 42961,
+      "arbitrage": 6019,
+      "best_of": 43382,
+      "days": 91
+    },
+    "2025Q3": {
+      "fcr_n": 21977,
+      "fcr_d_stacked": 55711,
+      "arbitrage": 6730,
+      "best_of": 56575,
+      "days": 92
+    },
+    "2025Q4": {
+      "fcr_n": 9854,
+      "fcr_d_stacked": 17402,
+      "arbitrage": 5385,
+      "best_of": 17703,
+      "days": 92
+    },
+    "2026Q1": {
+      "fcr_n": 9802,
+      "fcr_d_stacked": 12228,
+      "arbitrage": 6251,
+      "best_of": 13839,
+      "days": 90
+    },
+    "2026Q2": {
+      "fcr_n": 9773,
+      "fcr_d_stacked": 13578,
+      "arbitrage": 5399,
+      "best_of": 14561,
+      "days": 91
+    },
+    "2026Q3": {
+      "fcr_n": 10402,
+      "fcr_d_stacked": 10007,
+      "arbitrage": 4002,
+      "best_of": 11731,
+      "days": 92
+    }
+  },
+  "first_quarter_fcr_n_out_earned_fcr_d": "2026Q3",
   "trend": {
     "calendar_year_annualised_eur_per_mw_year": {
       "2022": {

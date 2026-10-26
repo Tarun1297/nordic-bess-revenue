@@ -131,6 +131,16 @@ def test_best_of_picks_daily_maximum() -> None:
     assert out["best_strategy"].tolist() == ["fcr_n", "fcr_d_stacked"]
 
 
+def test_quarterly_sums_and_counts_days() -> None:
+    # 31 Mar is Q1, 1-2 Apr are Q2: Q1 = 10 EUR over 1 day, Q2 = 20 + 30 over 2 days, on 2 MW.
+    idx = pd.to_datetime(["2026-03-31", "2026-04-01", "2026-04-02"])
+    days = pd.DataFrame({"s": [10.0, 20.0, 30.0], "label": ["x", "y", "z"]}, index=idx)
+    q = revenue.quarterly(days, power_mw=2.0)
+    assert q.index.astype(str).tolist() == ["2026Q1", "2026Q2"]
+    assert q["s"].tolist() == [5.0, 25.0]
+    assert q["days"].tolist() == [1, 2]  # partial quarters stay visible
+
+
 def test_monthly_and_annualised() -> None:
     idx = pd.to_datetime(["2026-01-30", "2026-01-31", "2026-02-01"])
     days = pd.DataFrame({"s": [10.0, 20.0, 30.0], "label": ["x", "y", "z"]}, index=idx)

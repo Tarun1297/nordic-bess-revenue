@@ -93,6 +93,19 @@ def monthly_table(days: pd.DataFrame, power_mw: float) -> pd.DataFrame:
     return m.rename_axis("month_cet").reset_index()
 
 
+def quarterly_table(days: pd.DataFrame, power_mw: float) -> pd.DataFrame:
+    """Quarterly EUR/MW per strategy with a YYYYQn quarter column and its day count, for CSV."""
+    q = revenue.quarterly(days[strategies(days)], power_mw).round(0).astype(int)
+    q.index = q.index.astype(str)
+    return q.rename_axis("quarter_cet").reset_index()
+
+
+def first_quarter_fcr_n_led(quarters: pd.DataFrame) -> str | None:
+    """First quarter in which FCR-N out-earned stacked FCR-D, or None if it never did."""
+    led = quarters[quarters["fcr_n"] > quarters["fcr_d_stacked"]]
+    return None if led.empty else str(led["quarter_cet"].iloc[0])
+
+
 def _ytd_mask(index: pd.DatetimeIndex, end: date) -> Any:
     """Days whose (month, day) is on or before end's, in any year: a like-for-like YTD window."""
     return (index.month < end.month) | ((index.month == end.month) & (index.day <= end.day))
@@ -161,6 +174,14 @@ def build_summary(
             s: round((last3[s] / first3[s] - 1) * 100, 1) for s in strategies(days)
         },
         "days_won_by_strategy": headline["best_strategy"].value_counts().to_dict(),
+        # Whole trend window; "days" below a full quarter marks a partial one at the edges.
+        "quarterly_eur_per_mw": {
+            row.pop("quarter_cet"): row
+            for row in quarterly_table(days, params.power_mw).to_dict("records")
+        },
+        "first_quarter_fcr_n_out_earned_fcr_d": first_quarter_fcr_n_led(
+            quarterly_table(days, params.power_mw)
+        ),
         "trend": {
             "calendar_year_annualised_eur_per_mw_year": yearly,
             "ytd_like_for_like_annualised_eur_per_mw_year": ytd_yearly,
@@ -340,6 +361,46 @@ def chart_price_box(prices: pd.DataFrame, path: Path) -> None:
     plt.close(fig)
 
 
+def chart_quarterly(
+    days: pd.DataFrame, summary: dict[str, Any], params: config.Params, path: Path
+) -> None:
+    """Draw grouped bars of quarterly revenue per strategy across the whole trend window."""
+    q = quarterly_table(days, params.power_mw)
+    bars = [s for s in ("fcr_d_stacked", "fcr_n", "arbitrage") if s in q.columns]
+    periods = pd.PeriodIndex(q["quarter_cet"], freq="Q")
+    first_led = summary["first_quarter_fcr_n_out_earned_fcr_d"]
+    if first_led and first_led == q["quarter_cet"].iloc[-1]:
+        title = f"In {first_led[-2:]} {first_led[:4]}, FCR-N out-earned FCR-D for the first time"
+    elif first_led:
+        title = f"FCR-N first out-earned FCR-D in {first_led[-2:]} {first_led[:4]}"
+    else:
+        span = f"{q['quarter_cet'].iloc[0]} to {q['quarter_cet'].iloc[-1]}"
+        title = f"Quarterly revenue by strategy, {span}"
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    fig.subplots_adjust(left=0.08, right=0.97, top=0.82, bottom=0.17)
+    _style(ax, title, "Revenue per quarter, EUR per MW, by strategy, market time (CET)")
+    width = 0.8 / len(bars)
+    for i, s in enumerate(bars):
+        x = [j + (i - (len(bars) - 1) / 2) * width for j in range(len(q))]
+        ax.bar(x, q[s], width=width * 0.9, color=COLORS[s], label=LABELS[s])
+    # A quarter is full at 90+ days; anything shorter is a partial quarter at the edges.
+    for j, n in enumerate(q["days"]):
+        if n < 90:
+            ax.text(j, 0, "partial", rotation=90, fontsize=7, color=MUTED, ha="center", va="bottom")
+    # Year under each Q1 (and the first bar), so the axis reads as a calendar without clutter.
+    labels = [
+        f"Q{per.quarter}\n{per.year}" if per.quarter == 1 or j == 0 else f"Q{per.quarter}"
+        for j, per in enumerate(periods)
+    ]
+    ax.set_xticks(range(len(q)), labels)
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:,.0f}"))
+    ax.set_xlim(-0.6, len(q) - 0.4)
+    _legend_top(ax)
+    _source(fig, SOURCE_NOTE.format(power=params.power_mw, energy=params.energy_mwh))
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
 def chart_daily_profile(prices: pd.DataFrame, path: Path) -> None:
     """Average price by hour of the CET day, per product, over the headline period."""
     prof = (
@@ -380,10 +441,11 @@ def write_outputs(
     quality: dict[str, list[validate.CheckResult]],
     out_dir: Path = config.DATA_OUTPUT,
 ) -> dict[str, Any]:
-    """Write monthly_revenue.csv, summary.json and the charts; return the summary."""
+    """Write the monthly and quarterly CSVs, summary.json and the charts; return the summary."""
     charts = out_dir / "charts"
     charts.mkdir(parents=True, exist_ok=True)
     monthly_table(days, params.power_mw).to_csv(out_dir / "monthly_revenue.csv", index=False)
+    quarterly_table(days, params.power_mw).to_csv(out_dir / "quarterly_revenue.csv", index=False)
     summary = build_summary(days, params, quality)
     # Stable key order and no generation timestamp, so re-runs on the same inputs diff clean.
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
@@ -392,7 +454,8 @@ def write_outputs(
     fcr = prices["product"].isin(list(config.FINGRID_DATASETS.values()))
     headline_prices = prices[fcr & (ts.dt.date >= params.start) & (ts.dt.date <= params.end)]
     chart_monthly(days, summary, params, charts / "monthly_revenue.png")
+    chart_quarterly(days, summary, params, charts / "quarterly_revenue.png")
     chart_price_box(headline_prices, charts / "price_distribution.png")
     chart_daily_profile(headline_prices, charts / "daily_price_profile.png")
-    log.info("wrote monthly_revenue.csv, summary.json and 3 charts to %s", out_dir)
+    log.info("wrote monthly and quarterly CSVs, summary.json and 4 charts to %s", out_dir)
     return summary

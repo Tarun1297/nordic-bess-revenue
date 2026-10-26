@@ -22,6 +22,7 @@
 
   FCR-D fell by about 85% from 2023 to 2026, while arbitrage has held between 20,923 and 25,116 a year since 2023, after the 2022 energy crisis. In the last 12 months arbitrage earned 40% as much as FCR-D. 2026 covers January to September only; for the same months in every year, see `ytd_like_for_like` in [summary.json](data/output/summary.json).
 - **The decline is still running, and it hits FCR-D hardest.** From the first quarter of the headline year (Oct–Dec 2025) to the last (Jul–Sep 2026), FCR-D revenue fell 42.5% and arbitrage 25.7%, while FCR-N rose 5.6%. The best month was October 2025 (8,489 EUR/MW, best-of) and the worst was December 2025 (2,874).
+- **Quarter by quarter, FCR-N has now caught up.** In Q3 2026 FCR-N earned 10,402 EUR/MW against FCR-D's 10,007: the first quarter it came out ahead. FCR-D's best quarter was Q3 2023, at 143,277. Arbitrage has stayed between 3,247 and 6,981 per quarter since 2023, so its share of the quarterly best-of rose from 3% in Q2 2023 to 34–45% in 2026. See the [quarterly chart](data/output/charts/quarterly_revenue.png) and [quarterly_revenue.csv](data/output/quarterly_revenue.csv).
 - **FCR-D up is an evening product.** Its price peaks at 18:00 CET, 3.4× its 03:00 low. FCR-N and FCR-D down stay almost flat through the day.
 
 ![Monthly battery revenue, 2022 to 2026](data/output/charts/monthly_revenue.png)

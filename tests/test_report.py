@@ -49,6 +49,16 @@ def test_summary_headline_and_trend_are_hand_checkable() -> None:
     assert s["data_quality"] == ["all checks passed"]
 
 
+def test_quarterly_section_and_first_fcr_n_lead() -> None:
+    s = report.build_summary(two_years(), PARAMS, {"fcr_n": []})
+    q = s["quarterly_eur_per_mw"]
+    # 2022 Q1: 90 days x 10 (FCR-N) and x 20 (FCR-D); 2023 Q1: 90 days x 5 and x 2.
+    assert q["2022Q1"] == {"fcr_n": 900, "fcr_d_stacked": 1800, "best_of": 1800, "days": 90}
+    assert q["2023Q1"]["fcr_n"] == 450 and q["2023Q1"]["fcr_d_stacked"] == 180
+    # FCR-N first beats FCR-D in 2023 Q1, when it pays 5 a day against 2.
+    assert s["first_quarter_fcr_n_out_earned_fcr_d"] == "2023Q1"
+
+
 def test_summary_lists_failed_checks_only() -> None:
     quality = {
         "fcr_n": [
@@ -78,5 +88,6 @@ def test_write_outputs_creates_every_file(tmp_path: Path) -> None:
     assert list(csv.columns) == ["month_cet", "fcr_n", "fcr_d_stacked", "best_of"]
     assert len(csv) == 24
     assert json.loads((tmp_path / "summary.json").read_text()) == summary
-    for name in ("monthly_revenue.png", "price_distribution.png", "daily_price_profile.png"):
+    charts = ("monthly_revenue.png", "quarterly_revenue.png", "price_distribution.png")
+    for name in (*charts, "daily_price_profile.png"):
         assert (tmp_path / "charts" / name).stat().st_size > 10_000
