@@ -30,3 +30,5 @@ def test_duration_sensitivity_scales_bids_by_stored_energy() -> None:
     assert out["1h"]["fcr_n"] == 43_800
     assert out["2h"]["fcr_n"] == round(10 * 24 * 365 / 1.34)
     assert out["1h"]["fcr_d_stacked"] == out["2h"]["fcr_d_stacked"] == round(20 * 24 * 365 / 1.2)
+    # Best-of here is FCR-D (it pays more); per MWh it halves when the energy doubles.
+    assert out["2h"]["best_of_per_mwh"] == round(20 * 24 * 365 / 1.2 / 2)
