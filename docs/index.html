@@ -1,0 +1,1562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finland BESS revenue</title>
+<meta name="description" content="Where a 1 MW / 1 MWh battery in Finland earns its money, and how that changed: FCR-N, FCR-D and day-ahead trading, 2022 to 2026.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-anthropic-serif: Georgia, "Times New Roman", serif;
+    --color-bg: #ffffff; --color-panel: #f7f6f3; --color-fg: #1f1e1c; --color-fg-muted: #64625d;
+    --color-border-line: #e2e0db; --color-ok: #1a7f37; --color-bad: #c42b1c;
+    --cds-border: #d6d3cc; --cds-surface-popover: #ffffff; --cds-text-secondary: #64625d;
+    --cds-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --cds-chart-axis: #b9b6af; --cds-chart-grid: #ebe9e4; --cds-chart-muted: #9a978f; --cds-chart-reference: #8a877f;
+    --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 36px;
+    --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 18px;
+    --cds-radius: 8px; --cds-dur-slow: 300ms; --cds-font-weight-medium: 600;
+    --cds-font-size-caption: 12.5px; --cds-font-size-body: 15px; --cds-font-size-heading: 17px; --cds-font-size-title: 28px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --color-bg: #1b1a19; --color-panel: #252422; --color-fg: #ecebe8; --color-fg-muted: #a5a39d;
+      --color-border-line: #3a3936; --color-ok: #4ac26b; --color-bad: #f47067;
+      --cds-border: #4a4844; --cds-surface-popover: #2c2b29; --cds-text-secondary: #a5a39d;
+      --cds-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.5);
+      --cds-chart-axis: #5d5b56; --cds-chart-grid: #33322f; --cds-chart-muted: #8c8a84; --cds-chart-reference: #9a978f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); }
+  #dash-root { max-width: 72rem; margin: 0 auto; padding: 24px 16px 48px; }
+  .dash-skeleton { color: transparent; }
+  .sa-foot { margin-top: 40px; font-size: 12.5px; color: var(--color-fg-muted); }
+  .sa-foot a { color: inherit; }
+</style>
+<script>
+window.dash = (() => {
+  const raw = {"monthly": "month,fcr_n,fcr_d_stacked,arbitrage,fcr_d_plus_trade,best_of,fcr_n_days_won,fcr_d_days_won,arbitrage_days_won,mixed_days_won,days\n2022-01,6998.21,19796.36,3167.05,19983.9,20423.99,1,13,0,17,31\n2022-02,5327.95,15554.35,2579.49,15771.26,15771.26,0,11,0,17,28\n2022-03,7694.07,8750.25,3951.59,9929.88,10540.89,7,3,1,20,31\n2022-04,6206.75,10835.4,2773.38,11527.27,11988.6,6,3,0,21,30\n2022-05,20907.82,37193.18,5146.96,38453.6,44626.18,14,3,1,13,31\n2022-06,12349.86,6008.49,5392.31,8140.59,15027.49,19,0,6,5,30\n2022-07,11683.77,13217.34,6192.29,15080.17,16801.61,7,2,1,21,31\n2022-08,11718.94,27608.16,10125.35,31217.03,32975.17,7,0,1,23,31\n2022-09,15942.6,39825.94,7863.63,41835.16,42465.8,4,2,1,23,30\n2022-10,29802.14,54684.27,3864.0,54959.07,57770.33,5,11,0,15,31\n2022-11,15948.11,24371.67,4127.18,24956.67,28493.67,10,7,0,13,30\n2022-12,12363.24,15186.86,4144.29,16150.5,18299.59,9,1,0,21,31\n2023-01,9585.76,14752.22,1959.1,14928.6,15605.17,7,7,0,17,31\n2023-02,7583.78,7394.46,1919.21,7882.35,9478.03,18,0,0,10,28\n2023-03,10016.15,7963.33,1763.32,8376.33,10791.91,21,3,1,6,31\n2023-04,11860.01,17162.13,1147.76,17274.9,20390.76,9,10,0,11,30\n2023-05,28638.68,42788.29,1161.65,42828.85,46823.59,14,8,0,9,31\n2023-06,20961.11,26716.54,937.8,26731.53,29178.19,11,9,0,10,30\n2023-07,23947.58,43383.28,700.29,43391.09,44734.17,5,18,0,8,31\n2023-08,14904.6,51262.09,2697.76,51521.97,51868.92,4,11,0,16,31\n2023-09,32786.16,48631.18,2312.24,48965.17,51960.16,9,10,0,11,30\n2023-10,20815.7,24480.53,2365.54,24821.7,29202.84,13,10,0,8,31\n2023-11,12051.97,13671.23,2400.79,14006.61,15153.11,10,8,0,12,30\n2023-12,13147.87,21670.37,1557.87,21743.25,22646.65,7,16,0,8,31\n2024-01,14695.81,22991.17,3747.21,23711.3,24646.12,6,12,0,13,31\n2024-02,16320.96,20292.2,1029.99,20359.65,21275.19,10,12,0,7,29\n2024-03,16414.58,18365.07,1264.53,18440.23,21290.18,12,10,0,9,31\n2024-04,27369.04,21788.62,1661.55,21965.33,30743.95,24,4,0,2,30\n2024-05,32208.75,39834.08,2604.41,40173.5,49359.57,17,6,0,8,31\n2024-06,21446.3,25919.42,2124.87,26207.72,30709.46,16,7,0,7,30\n2024-07,12266.62,10371.45,607.83,10377.57,13293.73,22,8,0,1,31\n2024-08,14770.58,19646.38,776.69,19770.29,21564.16,12,11,0,8,31\n2024-09,9133.45,17854.45,3499.61,18770.45,19072.51,3,6,1,20,30\n2024-10,11573.55,21094.15,2513.51,21792.51,22945.09,10,6,0,15,31\n2024-11,12499.88,17008.67,1876.57,17312.02,20114.83,10,4,0,16,30\n2024-12,12526.64,12786.15,2174.79,13409.23,16673.14,18,5,0,8,31\n2025-01,10734.04,19541.12,2301.96,20034.77,20900.83,7,8,0,16,31\n2025-02,8725.26,11797.1,2102.67,12298.83,13277.33,8,5,0,15,28\n2025-03,8817.52,15775.98,2576.65,16478.22,17001.32,2,6,0,23,31\n2025-04,6681.82,13053.38,3198.17,13798.98,13867.24,2,7,0,21,30\n2025-05,6899.93,13855.15,1171.67,13917.82,13923.64,1,19,0,11,31\n2025-06,6381.59,16052.34,1649.3,16270.52,16397.53,4,15,0,11,30\n2025-07,5668.72,13131.13,1259.87,13196.38,13196.38,0,19,0,12,31\n2025-08,10081.05,25442.59,2731.59,25925.99,26738.7,3,10,0,18,31\n2025-09,6227.59,17137.66,2738.99,17654.53,17654.53,0,9,0,21,30\n2025-10,4563.03,8344.29,2708.33,8946.9,8960.0,0,11,1,19,31\n2025-11,3272.42,6230.18,1482.64,6533.2,6577.6,1,9,0,20,30\n2025-12,2018.43,2827.24,1194.38,3169.89,3169.89,0,10,0,21,31\n2026-01,2492.46,3574.05,2274.04,4216.61,4272.13,1,1,0,29,31\n2026-02,3814.94,3804.06,2979.5,4741.74,5598.45,7,2,1,18,28\n2026-03,3494.5,4850.32,997.47,5022.83,5254.29,5,10,0,16,31\n2026-04,2724.37,4355.68,1863.98,4814.02,4839.02,2,5,0,23,30\n2026-05,3068.32,5127.08,1828.94,5518.12,5578.78,2,2,0,27,31\n2026-06,3980.64,4095.06,1706.18,4496.5,5055.54,11,6,0,13,30\n2026-07,2898.57,3158.82,397.53,3168.66,3414.98,11,11,0,9,31\n2026-08,3318.12,2873.15,1418.64,3242.25,3701.61,13,4,0,14,31\n2026-09,4185.66,3975.17,2186.22,4583.32,4851.15,9,6,0,15,30\n", "assumptions": "key,value,label\npower_mw,1.0,Battery power (MW)\nenergy_mwh,1.0,Battery energy (MWh)\navailability,1.0,Share of hours available\nround_trip_efficiency,0.88,Round-trip efficiency\nbid_fcr_n_mw,0.5,Largest compliant FCR-N bid (MW)\nbid_fcr_d_mw,0.833,\"Largest compliant FCR-D bid, each direction (MW)\"\narb_buy_mwh,1.0,Arbitrage: energy bought per day (MWh)\narb_sell_mwh,0.88,Arbitrage: energy sold per day (MWh)\nmixed_trade_mwh,0.444,FCR-D + one trade: energy traded per day (MWh)\nnameplate_fcr_n,79663.0,\"FCR-N if 1 MW could be bid (EUR/MW/year, last 12 months)\"\nactual_fcr_n,39831.0,\"FCR-N with the allowed 0.5 MW bid: what it earned (EUR/MW/year, last 12 months)\"\nnameplate_fcr_d_stacked,63858.0,\"FCR-D up + down if 1 MW could be bid (EUR/MW/year, last 12 months)\"\nactual_fcr_d_stacked,53215.0,\"FCR-D up + down with the allowed 0.833 MW bid: what it earned (EUR/MW/year, last 12 months)\"\n", "prices": "product,min,p25,median,p75,p95,max,mean\nfcr_n,3.61,5.9,7.28,10.19,18.0,140.0,9.09\nfcr_d_up,1.0,2.0,2.8,4.38,9.51,178.8,4.45\nfcr_d_down,1.0,1.9,2.2,3.12,6.07,38.4,2.84\n", "profile": "hour,fcr_n,fcr_d_up,fcr_d_down\n0,8.68,3.42,2.84\n1,8.16,2.93,2.66\n2,8.43,2.84,3.05\n3,8.24,2.3,3.12\n4,8.76,2.3,3.3\n5,8.61,2.41,3.09\n6,9.33,3.57,3.22\n7,10.05,4.39,3.04\n8,10.37,5.78,3.0\n9,9.84,5.02,2.85\n10,9.4,4.54,2.81\n11,9.39,4.76,2.82\n12,8.86,4.36,2.91\n13,8.92,3.96,2.98\n14,9.1,4.02,3.01\n15,9.08,5.05,2.85\n16,9.3,5.87,2.82\n17,9.71,6.56,2.83\n18,9.65,7.77,2.72\n19,9.42,6.84,2.58\n20,9.02,5.54,2.48\n21,8.52,4.63,2.3\n22,8.43,3.84,2.37\n23,8.98,4.05,2.55\n"};
+  const tables = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, d3.csvParse(v)]));
+  const calcs = {}, done = {}, callbacks = [];
+  const get = (name) => {
+    if (!(name in done)) {
+      const c = calcs[name];
+      done[name] = tables[name] || c.fn(...c.inputs.map(get));
+    }
+    return done[name];
+  };
+  const run = () => callbacks.forEach((f) => f());
+  document.addEventListener("DOMContentLoaded", run);
+  // Charts size themselves from their box, so redraw when the window width changes.
+  let timer, width = innerWidth;
+  addEventListener("resize", () => {
+    if (innerWidth === width) return;
+    width = innerWidth;
+    clearTimeout(timer);
+    timer = setTimeout(run, 150);
+  });
+  return {
+    colors: ["#2a78d6", "#eb6834", "#1baf7a", "#6250d6", "#008300"],
+    calc: (name, spec) => { calcs[name] = spec; },
+    data: (name) => ({ status: "ok", data: get(name) }),
+    onData: (f) => { callbacks.push(f); },
+    setLink: (id) => history.replaceState(null, "", "#" + id),
+  };
+})();
+</script>
+</head>
+<body>
+<div id="dash-root">
+<style>
+  .bx { font-family: var(--font-anthropic-sans); display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+  .bx-head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .bx-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .bx-take { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-body); max-width: 70ch; }
+  .bx .bx-take b { font-weight: var(--cds-font-weight-medium); color: var(--color-fg); }
+  .bx-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--cds-gap-md); }
+  .bx-kpi, .bx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  .bx-kpi { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .bx-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bx-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+  .bx-unit { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bx-delta { font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .bx-delta.up { color: var(--color-ok); } .bx-delta.down { color: var(--color-bad); }
+  .bx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--cds-gap-md); }
+  .bx-card { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+  .bx-card h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); text-wrap: balance; }
+  .bx-note { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bx-chart { position: relative; min-height: 260px; }
+  .bx-chart.tall { min-height: 320px; }
+  .bx-chart svg { display: block; overflow: visible; }
+  .bx-chart .tick text, .bx-axis text { fill: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .bx-chart .domain { stroke: var(--cds-chart-axis); }
+  .bx-chart .tick line { stroke: var(--cds-chart-grid); }
+  .bx-endlabel { fill: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .bx-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bx-legend span { display: inline-flex; align-items: center; gap: var(--cds-gap-xs); }
+  .bx-sw { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+  .bx-sw.dash { background: repeating-linear-gradient(90deg, var(--cds-chart-muted) 0 4px, transparent 4px 7px) !important; }
+  .bx-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 2; }
+  .bx-tip .h { color: var(--cds-text-secondary); margin-bottom: 2px; }
+  .bx-tip .r { display: flex; align-items: center; gap: var(--cds-gap-xs); }
+  .bx-tip .r b { margin-left: auto; padding-left: var(--cds-pad-sm); font-weight: var(--cds-font-weight-medium); }
+  .bx-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+  .bx-table th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) 0; border-bottom: 1px solid var(--color-border-line); }
+  .bx-table td { padding: var(--cds-pad-xs) 0; border-bottom: 1px solid var(--color-border-line); }
+  .bx-table td:last-child, .bx-table th:last-child { text-align: right; }
+  .bx-list { margin: 0; padding-left: 1.1rem; font-size: var(--cds-font-size-body); color: var(--color-fg-muted); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .bx-fail { display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .bx-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  /* Tabs */
+  .bx [hidden] { display: none !important; }
+  .bx-tabs { display: flex; gap: var(--cds-gap-xs); border-bottom: 1px solid var(--color-border-line); }
+  .bx-tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: var(--cds-pad-sm) var(--cds-pad-md); font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg-muted); cursor: pointer; }
+  .bx-tab[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
+  .bx-tab:focus-visible { outline: 2px solid var(--bx-c0); outline-offset: 2px; border-radius: 4px; }
+  .bx-panel { display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+  /* Explainer */
+  .hw { display: flex; flex-direction: column; gap: var(--cds-gap-xl); max-width: 60rem; }
+  .hw-toc { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); }
+  .hw-toc a, .hw-tablink { color: var(--color-fg-muted); text-underline-offset: 3px; }
+  .hw-sec { display: flex; flex-direction: column; gap: var(--cds-gap-sm); scroll-margin-top: var(--cds-pad-lg); }
+  .hw-sec h2 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); text-wrap: balance; }
+  .hw-sec h3 { margin: 0; font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
+  .hw-sec p { margin: 0; max-width: 68ch; line-height: 1.55; }
+  .hw .hw-sec b { font-weight: var(--cds-font-weight-medium); }
+  .hw-lead { font-size: var(--cds-font-size-heading); color: var(--color-fg); }
+  .hw-fig { margin: 0; background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); color: var(--color-fg); }
+  .hw-fig svg { width: 100%; height: auto; max-width: 100%; display: block; }
+  .hw-fig figcaption { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 70ch; line-height: 1.5; }
+  .hw-t { font-size: 13px; font-weight: 600; fill: currentColor; }
+  .hw-s { font-size: 11.5px; fill: var(--color-fg-muted); }
+  .hw-box rect { fill: none; stroke: currentColor; stroke-width: 1.5; }
+  .hw-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--cds-gap-md); }
+  .hw-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md); display: flex; flex-direction: column; gap: var(--cds-gap-xs); min-width: 0; }
+  .hw-card p { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .hw-card code, .hw-formulas code, .hw-steps code { font-size: var(--cds-font-size-caption); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: 4px; padding: 2px 6px; overflow-wrap: anywhere; }
+  .hw-card-muted { opacity: 0.75; }
+  .hw-tag { width: 24px; height: 4px; border-radius: 2px; display: block; }
+  .hw-tag-dash { background: repeating-linear-gradient(90deg, var(--cds-chart-muted) 0 5px, transparent 5px 8px); }
+  .hw-tag-off { background: var(--color-border-line); }
+  .hw-formulas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--cds-gap-md); }
+  .hw-formulas > div { display: flex; flex-direction: column; gap: var(--cds-gap-xs); min-width: 0; }
+  .hw-formulas p { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .hw-callout { border-left: 3px solid var(--bx-c1); padding-left: var(--cds-pad-md); }
+  .hw-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--cds-gap-md); }
+  .hw-steps > div { display: flex; flex-direction: column; gap: var(--cds-gap-xs); min-width: 0; }
+  .hw-steps p { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .hw-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--cds-gap-md); }
+  .hw-result { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .hw-num { font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+  .hw-cap { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.5; }
+  .hw-list { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: var(--cds-gap-xs); max-width: 68ch; }
+  .hw-gloss { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: var(--cds-gap-sm) var(--cds-gap-lg); }
+  .hw-gloss > div { min-width: 0; }
+  .hw-gloss dt { font-weight: var(--cds-font-weight-medium); }
+  .hw-gloss dd { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.5; }
+  .hw-src-wrap { overflow-x: auto; }
+  .hw-src { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); }
+  .hw-src th { text-align: left; color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); padding: var(--cds-pad-xs) var(--cds-pad-sm) var(--cds-pad-xs) 0; border-bottom: 1px solid var(--color-border-line); }
+  .hw-src td { vertical-align: top; padding: var(--cds-pad-xs) var(--cds-pad-sm) var(--cds-pad-xs) 0; border-bottom: 1px solid var(--color-border-line); }
+  .hw-src a { color: var(--color-fg); text-underline-offset: 3px; }
+  /* Animated day */
+  .mo-controls { display: flex; align-items: center; gap: var(--cds-gap-sm); flex-wrap: wrap; }
+  .mo-play { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-md); border-radius: var(--cds-radius); border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); cursor: pointer; min-width: 5.5rem; }
+  .mo-play:focus-visible, #mo-hour:focus-visible { outline: 2px solid var(--bx-c0); outline-offset: 2px; }
+  #mo-hour { flex: 1 1 12rem; min-width: 0; accent-color: var(--bx-c0); }
+  #mo-clock { font-variant-numeric: tabular-nums; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); min-width: 3rem; }
+  .mo-status { margin: 0; min-height: 3em; font-size: var(--cds-font-size-body); line-height: 1.5; }
+  .mo-onbar { fill: var(--color-bg); }
+  .hw-fig h3 { margin: 0; }
+  /* Frequency explainer, disturbance and worked example */
+  .fq-buttons { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); }
+  .fq-btn { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-radius: var(--cds-radius); border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+  .fq-btn[aria-pressed="true"] { border-color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
+  .fq-btn:focus-visible, #fq-gap:focus-visible { outline: 2px solid var(--bx-c0); outline-offset: 2px; }
+  .fq-slider { display: flex; align-items: center; gap: var(--cds-gap-sm); flex-wrap: wrap; }
+  #fq-gap { flex: 1 1 12rem; min-width: 0; accent-color: var(--bx-c0); }
+  .hw-s-html { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .hw-example { display: flex; flex-direction: column; gap: var(--cds-gap-sm); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
+  .hw-example h3 { margin: 0; }
+  .hw-prices { display: flex; flex-direction: column; gap: 2px; font-size: var(--cds-font-size-caption); }
+  .hw .hw-prices b { font-weight: var(--cds-font-weight-medium); }
+  .hw-calc td { font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .hw-calc td:last-child, .hw-calc th:last-child { text-align: right; white-space: nowrap; font-weight: var(--cds-font-weight-medium); }
+</style>
+
+<div class="bx">
+  <header class="bx-head">
+    <h1 class="bx-title" id="top">Finland BESS revenue</h1>
+    <p class="bx-take" id="takeaway">
+      In <span data-source="headline" data-field="window" data-where="strategy=fcr_d_stacked" class="dash-skeleton">—</span>,
+      a <span data-source="assumptions" data-field="value" data-where="key=power_mw">—</span> MW / <span data-source="assumptions" data-field="value" data-where="key=energy_mwh">—</span> MWh battery earned most from FCR-D up + down with one daily trade on top:
+      <b data-source="headline" data-field="last12" data-where="strategy=mixed" class="dash-skeleton">—</b> EUR per MW
+      (<b data-source="headline" data-field="last12" data-where="strategy=fcr_d_stacked">—</b> from FCR-D alone),
+      against <b data-source="headline" data-field="last12" data-where="strategy=fcr_n">—</b> from FCR-N and
+      <b data-source="headline" data-field="last12" data-where="strategy=arbitrage">—</b> from day-ahead trading.
+      The best of these strategies, picked each day with hindsight, is
+      <b data-source="vs_peak" data-field="change_pct" data-row="0" class="dash-skeleton">—</b>
+      against its <span data-source="vs_peak" data-field="peak_year" data-row="0" class="dash-skeleton">—</span> peak: reserve prices have collapsed as batteries filled the market, while trading has held steady.
+    </p>
+  </header>
+
+  <div class="bx-tabs" role="tablist" aria-label="Dashboard pages">
+    <button class="bx-tab" role="tab" id="tab-results" data-tab="results" aria-selected="true" aria-controls="results">Results</button>
+    <button class="bx-tab" role="tab" id="tab-how" data-tab="how" aria-selected="false" aria-controls="how" tabindex="-1">How it works</button>
+  </div>
+
+  <section id="results" class="bx-panel" role="tabpanel" aria-labelledby="tab-results">
+
+  <section class="bx-kpis" aria-label="Last 12 months">
+    <div class="bx-kpi">
+      <span class="bx-label">FCR-D + one trade, last 12 months</span>
+      <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=mixed">—</span>
+      <span class="bx-unit">EUR per MW · FCR-D except two hours; trades <span data-source="assumptions" data-field="value" data-where="key=mixed_trade_mwh">—</span> MWh a day</span>
+      <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=mixed">—</span> vs prior 12 months</span>
+    </div>
+    <div class="bx-kpi">
+      <span class="bx-label">FCR-D up + down, last 12 months</span>
+      <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=fcr_d_stacked">—</span>
+      <span class="bx-unit">EUR per MW · bid <span data-source="assumptions" data-field="value" data-where="key=bid_fcr_d_mw">—</span> MW each way</span>
+      <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=fcr_d_stacked">—</span> vs prior 12 months</span>
+    </div>
+    <div class="bx-kpi">
+      <span class="bx-label">FCR-N, last 12 months</span>
+      <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=fcr_n">—</span>
+      <span class="bx-unit">EUR per MW · bid <span data-source="assumptions" data-field="value" data-where="key=bid_fcr_n_mw">—</span> MW</span>
+      <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=fcr_n">—</span> vs prior 12 months</span>
+    </div>
+    <div class="bx-kpi">
+      <span class="bx-label">Day-ahead arbitrage, last 12 months</span>
+      <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=arbitrage">—</span>
+      <span class="bx-unit">EUR per MW · buy <span data-source="assumptions" data-field="value" data-where="key=arb_buy_mwh">—</span> MWh, sell <span data-source="assumptions" data-field="value" data-where="key=arb_sell_mwh">—</span> MWh a day</span>
+      <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=arbitrage">—</span> vs prior 12 months</span>
+    </div>
+    <div class="bx-kpi">
+      <span class="bx-label">Daily best-of, last 12 months</span>
+      <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=best_of">—</span>
+      <span class="bx-unit">EUR per MW · best modelled strategy each day, perfect foresight</span>
+      <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=best_of">—</span> vs prior 12 months</span>
+    </div>
+    <div class="bx-kpi">
+      <span class="bx-label">Best-of vs peak year</span>
+      <span class="bx-big" data-source="vs_peak" data-field="change_pct" data-row="0">—</span>
+      <span class="bx-unit">peak year <span data-source="vs_peak" data-field="peak_year" data-row="0">—</span>:
+        <span data-source="vs_peak" data-field="peak" data-row="0">—</span> EUR per MW</span>
+      <span class="bx-unit">Best of the modelled strategies against the best full calendar year</span>
+    </div>
+  </section>
+
+  <section class="bx-card" id="monthly-card">
+    <h2 id="monthly">Revenue peaked in 2023 and has fallen since</h2>
+    <p class="bx-note">Monthly revenue in EUR per MW, January 2022 to September 2026, market time (CET). Shaded: last 12 months.</p>
+    <div class="bx-legend">
+      <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
+      <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
+      <span><i class="bx-sw" style="background: var(--bx-c3)"></i>Day-ahead arbitrage</span>
+      <span><i class="bx-sw" style="background: var(--bx-c4)"></i>FCR-D + one trade</span>
+      <span><i class="bx-sw dash"></i>Daily best-of</span>
+    </div>
+    <div class="bx-chart tall" id="chart-monthly" data-source="monthly"></div>
+  </section>
+
+  <section class="bx-card" id="quarterly-card">
+    <h2 id="quarterly">Revenue by quarter</h2>
+    <p class="bx-note">Revenue per quarter in EUR per MW, by strategy, market time (CET). A quarter with fewer than 90 days of data is marked partial.</p>
+    <div class="bx-legend">
+      <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
+      <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
+      <span><i class="bx-sw" style="background: var(--bx-c3)"></i>Day-ahead arbitrage</span>
+      <span><i class="bx-sw" style="background: var(--bx-c4)"></i>FCR-D + one trade</span>
+    </div>
+    <div class="bx-chart tall" id="chart-quarterly" data-source="quarterly"></div>
+  </section>
+
+  <div class="bx-grid">
+    <section class="bx-card">
+      <h2 id="yearly">Reserve revenue has fallen every year since 2023; trading has held steady</h2>
+      <p class="bx-note">Annualised EUR per MW per calendar year. 2026 runs January to September only.</p>
+      <div class="bx-legend">
+        <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
+        <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
+        <span><i class="bx-sw" style="background: var(--bx-c3)"></i>Day-ahead arbitrage</span>
+        <span><i class="bx-sw" style="background: var(--bx-c4)"></i>FCR-D + one trade</span>
+      </div>
+      <div class="bx-chart" id="chart-yearly" data-source="yearly"></div>
+    </section>
+    <section class="bx-card">
+      <h2 id="days">FCR-N wins more days as FCR-D prices fall</h2>
+      <p class="bx-note">Days per month on which each strategy paid most, last 12 months.</p>
+      <div class="bx-legend">
+        <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
+        <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
+        <span><i class="bx-sw" style="background: var(--bx-c3)"></i>Day-ahead arbitrage</span>
+        <span><i class="bx-sw" style="background: var(--bx-c4)"></i>FCR-D + one trade</span>
+      </div>
+      <div class="bx-chart" id="chart-days" data-source="monthly"></div>
+    </section>
+  </div>
+
+  <div class="bx-grid">
+    <section class="bx-card">
+      <h2 id="profile">FCR-D up is an evening product</h2>
+      <p class="bx-note">Average price by hour of day, last 12 months, EUR per MW per hour (CET).</p>
+      <div class="bx-legend">
+        <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
+        <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up</span>
+        <span><i class="bx-sw" style="background: var(--bx-c2)"></i>FCR-D down</span>
+      </div>
+      <div class="bx-chart" id="chart-profile" data-source="profile"></div>
+    </section>
+    <section class="bx-card">
+      <h2 id="spread">Per MW, FCR-N pays most, but a 1-hour battery can bid less of it</h2>
+      <p class="bx-note">Hourly prices, last 12 months, EUR per MW per hour. Bar: middle half of hours; dot: median; line to the 95th percentile.</p>
+      <div class="bx-chart" id="chart-spread" data-source="prices"></div>
+    </section>
+  </div>
+
+  <div class="bx-grid">
+    <section class="bx-card">
+      <h2 id="assumptions">Battery and bids</h2>
+      <p class="bx-note">Bids are the largest Fingrid's Table 10 rules allow a battery to offer (Nordic FCR Technical Requirements, valid from 14 May 2025).</p>
+      <table class="bx-table" data-source="assumptions" data-row-key="key">
+        <thead><tr><th data-field="label">Item</th><th data-field="value">Value</th></tr></thead>
+        <tbody id="assumptions-body"></tbody>
+      </table>
+    </section>
+    <section class="bx-card">
+      <h2 id="limits">What these numbers leave out</h2>
+      <ul class="bx-list">
+        <li>Perfect foresight in the daily best-of: real bids are placed before prices are known.</li>
+        <li>Only the modelled schedules: splitting power between FCR and trading, or more than one trade a day, could earn more (How it works, section 7).</li>
+        <li>Full availability, no bidding risk, no degradation, fees or grid tariffs.</li>
+        <li>Capacity payments only: energy delivered during activations is not paid here.</li>
+        <li>Hourly FCR market and day-ahead only; the yearly FCR market, aFRR, mFRR and intraday are not modelled.</li>
+        <li>Today's battery rules applied to 2022–2025 so the years compare like for like.</li>
+      </ul>
+      <p class="bx-note">Data: Fingrid open data, datasets 317, 318 and 283 (CC BY 4.0); Finnish day-ahead prices from the ENTSO-E Transparency Platform. Built by the nordic-bess-revenue pipeline.</p>
+    </section>
+  </div>
+  </section>
+
+  <section id="how" role="tabpanel" aria-labelledby="tab-how" hidden>
+    <div class="hw">
+
+      <nav class="hw-toc" aria-label="On this page">
+        <a href="#how-question">The question</a>
+        <a href="#how-grid">Why the grid pays</a>
+        <a href="#how-earn">Two ways to earn</a>
+        <a href="#how-rule">The bid limit</a>
+        <a href="#how-disturbance">Long disturbances</a>
+        <a href="#how-strategies">Five strategies</a>
+        <a href="#how-day">One day</a>
+        <a href="#how-pipeline">How numbers are made</a>
+        <a href="#how-results">What we found</a>
+        <a href="#how-limits">Limits</a>
+        <a href="#how-glossary">Glossary</a>
+        <a href="#how-sources">Sources</a>
+      </nav>
+
+      <section class="hw-sec" id="how-question">
+        <h2>1. The question</h2>
+        <p class="hw-lead">Where does a battery in Finland earn its money, and how has that changed?</p>
+        <p>We study one standard battery: <b><span data-source="assumptions" data-field="value" data-where="key=power_mw">—</span> MW</b> of power and <b><span data-source="assumptions" data-field="value" data-where="key=energy_mwh">—</span> MWh</b> of energy. Think of it as a water tank with a pipe.</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 680 210" role="img" aria-label="A battery is a tank of energy connected to the grid by a pipe of power. Power is how fast energy moves. Energy is how much is stored.">
+            <defs>
+              <marker id="hw-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+            </defs>
+            <rect x="20" y="60" width="130" height="90" rx="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <text x="85" y="102" text-anchor="middle" class="hw-t">Power grid</text>
+            <text x="85" y="122" text-anchor="middle" class="hw-s">Finland, 50 Hz</text>
+            <rect x="150" y="96" width="260" height="18" fill="var(--bx-c0)" opacity="0.25"/>
+            <line x1="160" y1="88" x2="400" y2="88" stroke="currentColor" stroke-width="1.5" marker-end="url(#hw-arr)"/>
+            <text x="280" y="80" text-anchor="middle" class="hw-s">charge (buy power)</text>
+            <line x1="400" y1="124" x2="160" y2="124" stroke="currentColor" stroke-width="1.5" marker-end="url(#hw-arr)"/>
+            <text x="280" y="142" text-anchor="middle" class="hw-s">discharge (sell power)</text>
+            <text x="280" y="176" text-anchor="middle" class="hw-t">Pipe = POWER (MW)</text>
+            <text x="280" y="194" text-anchor="middle" class="hw-s">how fast energy can move</text>
+            <rect x="420" y="30" width="150" height="150" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="421" y="105" width="148" height="74" rx="9" fill="var(--bx-c0)" opacity="0.35"/>
+            <line x1="420" y1="105" x2="570" y2="105" stroke="var(--bx-c0)" stroke-width="2"/>
+            <text x="495" y="72" text-anchor="middle" class="hw-s">room to charge</text>
+            <text x="495" y="146" text-anchor="middle" class="hw-s">stored energy</text>
+            <text x="582" y="109" class="hw-s">half full</text>
+            <text x="495" y="200" text-anchor="middle" class="hw-t">Tank = ENERGY (MWh)</text>
+          </svg>
+          <figcaption>Power (MW) is how fast the battery can charge or discharge. Energy (MWh) is how much it holds. 1 MW for 1 hour moves 1 MWh, so this is a "1-hour battery".</figcaption>
+        </figure>
+      </section>
+
+      <section class="hw-sec" id="how-grid">
+        <h2>2. Why the grid pays batteries</h2>
+        <p>Electricity supply and demand must match every second. The sign of a mismatch is the grid's <b>frequency</b>: it sits at 50 Hz when supply equals demand, drops when there is too little power and rises when there is too much. Fingrid, Finland's grid operator, pays for capacity that reacts within seconds to pull it back. These products are called <b>Frequency Containment Reserves (FCR)</b>.</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 680 200" role="img" aria-label="A frequency ruler from 49.5 to 50.5 hertz. Between 49.9 and 50.1 FCR-N makes small pushes both ways. Below 49.9 FCR-D up discharges. Above 50.1 FCR-D down charges.">
+            <rect x="60" y="70" width="200" height="40" fill="var(--bx-c1)" opacity="0.30"/>
+            <rect x="260" y="70" width="160" height="40" fill="var(--bx-c0)" opacity="0.30"/>
+            <rect x="420" y="70" width="200" height="40" fill="var(--bx-c2)" opacity="0.30"/>
+            <line x1="60" y1="110" x2="620" y2="110" stroke="currentColor" stroke-width="1.5"/>
+            <g class="hw-s" text-anchor="middle">
+              <line x1="60" y1="110" x2="60" y2="118" stroke="currentColor"/><text x="60" y="134">49.5 Hz</text>
+              <line x1="260" y1="110" x2="260" y2="118" stroke="currentColor"/><text x="260" y="134">49.9</text>
+              <line x1="340" y1="62" x2="340" y2="118" stroke="currentColor" stroke-dasharray="3 3"/><text x="340" y="134">50.0 target</text>
+              <line x1="420" y1="110" x2="420" y2="118" stroke="currentColor"/><text x="420" y="134">50.1</text>
+              <line x1="620" y1="110" x2="620" y2="118" stroke="currentColor"/><text x="620" y="134">50.5 Hz</text>
+            </g>
+            <text x="160" y="95" text-anchor="middle" class="hw-t">FCR-D up</text>
+            <text x="340" y="95" text-anchor="middle" class="hw-t">FCR-N</text>
+            <text x="520" y="95" text-anchor="middle" class="hw-t">FCR-D down</text>
+            <text x="160" y="40" text-anchor="middle" class="hw-s">big drop (a plant trips):</text>
+            <text x="160" y="56" text-anchor="middle" class="hw-s">battery DISCHARGES</text>
+            <text x="340" y="40" text-anchor="middle" class="hw-s">every minute:</text>
+            <text x="340" y="56" text-anchor="middle" class="hw-s">small pushes both ways</text>
+            <text x="520" y="40" text-anchor="middle" class="hw-s">big rise (a load trips):</text>
+            <text x="520" y="56" text-anchor="middle" class="hw-s">battery CHARGES</text>
+            <text x="60" y="170" class="hw-s">← too little power: frequency falls</text>
+            <text x="620" y="170" text-anchor="end" class="hw-s">too much power: frequency rises →</text>
+          </svg>
+          <figcaption>Each product covers one part of the frequency range. FCR-N acts all the time, in both directions. The two FCR-D products act only during disturbances, which are rare.</figcaption>
+        </figure>
+        <div class="hw-cards">
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c0)"></span><h3>FCR-N</h3><p>"Normal operation." Keeps frequency between 49.9 and 50.1 Hz. Works in both directions, all day.</p></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c1)"></span><h3>FCR-D up</h3><p>"Disturbance, upward." Adds power when frequency falls below 49.9 Hz. Must hold for 20 minutes.</p></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c2)"></span><h3>FCR-D down</h3><p>"Disturbance, downward." Absorbs power when frequency rises above 50.1 Hz. Must hold for 20 minutes.</p></div>
+        </div>
+        <figure class="hw-fig" id="how-freq">
+          <h3>Why frequency goes up or down: a tug of war</h3>
+          <p class="hw-cap">Every power plant and every machine on the grid is linked to one shared rhythm, 50 turns a second. Power plants <b>push</b> the rhythm forward; everything that uses electricity <b>pulls</b> it back. When push and pull are equal, it stays at 50 Hz. More pull than push and it slows (frequency falls). More push than pull and it speeds up (frequency rises). Pick a moment to see what happens.</p>
+          <div class="fq-buttons" role="group" aria-label="Pick a moment">
+            <button type="button" class="fq-btn" data-gap="0.02">Calm minute</button>
+            <button type="button" class="fq-btn" data-gap="-0.07">Evening rush</button>
+            <button type="button" class="fq-btn" data-gap="0.06">Wind beats the forecast</button>
+            <button type="button" class="fq-btn" data-gap="-0.8">A power plant trips</button>
+            <button type="button" class="fq-btn" data-gap="0.7">A big load or export link drops out</button>
+          </div>
+          <div class="fq-slider">
+            <span class="hw-s-html">more used than made</span>
+            <input type="range" id="fq-gap" min="-1" max="1" step="0.01" value="0.02" aria-label="Balance between power made and power used">
+            <span class="hw-s-html">more made than used</span>
+          </div>
+          <svg id="fq-svg" viewBox="0 0 730 230" role="img" aria-label="Tug of war between power made and power used, and the grid frequency it produces, with the FCR product that reacts.">
+            <!-- Tug of war: two teams and a rope whose knot moves with the imbalance. -->
+            <text x="70" y="24" text-anchor="middle" class="hw-t">power used</text>
+            <text x="70" y="40" text-anchor="middle" class="hw-s">homes, industry, exports</text>
+            <text x="630" y="24" text-anchor="middle" class="hw-t">power made</text>
+            <text x="630" y="40" text-anchor="middle" class="hw-s">nuclear, hydro, wind, imports</text>
+            <rect id="fq-pull" x="20" y="54" width="100" height="22" rx="5" fill="var(--bx-c1)" opacity="0.8"/>
+            <rect id="fq-push" x="580" y="54" width="100" height="22" rx="5" fill="var(--bx-c0)" opacity="0.8"/>
+            <line x1="120" y1="65" x2="580" y2="65" stroke="currentColor" stroke-width="2"/>
+            <line x1="350" y1="50" x2="350" y2="80" stroke="currentColor" stroke-dasharray="3 3" opacity="0.5"/>
+            <circle id="fq-knot" cx="350" cy="65" r="8" fill="currentColor"/>
+            <!-- Frequency ruler with the FCR bands, same as the figure above. -->
+            <rect x="60" y="120" width="200" height="34" fill="var(--bx-c1)" opacity="0.25"/>
+            <rect x="260" y="120" width="180" height="34" fill="var(--bx-c0)" opacity="0.25"/>
+            <rect x="440" y="120" width="200" height="34" fill="var(--bx-c2)" opacity="0.25"/>
+            <text x="160" y="142" text-anchor="middle" class="hw-s">FCR-D up</text>
+            <text x="350" y="142" text-anchor="middle" class="hw-s">FCR-N</text>
+            <text x="540" y="142" text-anchor="middle" class="hw-s">FCR-D down</text>
+            <line x1="60" y1="154" x2="640" y2="154" stroke="currentColor" stroke-width="1.5"/>
+            <g class="hw-s" text-anchor="middle">
+              <text x="60" y="172">49.5</text><text x="260" y="172">49.9</text><text x="350" y="172">50.0 Hz</text><text x="440" y="172">50.1</text><text x="640" y="172">50.5</text>
+            </g>
+            <path id="fq-needle" d="M350,112 l-7,-12 h14 z" fill="currentColor"/>
+            <text id="fq-hz" x="350" y="96" text-anchor="middle" class="hw-t">50.01 Hz</text>
+            <text x="350" y="212" text-anchor="middle" class="hw-s">illustrative: the size of the move depends on how big the gap is and how fast reserves react</text>
+          </svg>
+          <p class="mo-status" id="fq-status" aria-live="polite">Calm minute: made and used are almost equal. Frequency wobbles a little around 50 Hz and FCR-N makes small pushes both ways.</p>
+          <figcaption>In real life the gap is never exactly zero. Demand changes every second, wind and solar don't match their forecasts, and plants follow schedules that change on the hour. FCR-N handles those small, constant wobbles. FCR-D is for the rare big jolts, when a large plant, line or load is suddenly lost.</figcaption>
+        </figure>
+      </section>
+
+      <section class="hw-sec" id="how-earn">
+        <h2>3. Two ways to earn</h2>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 680 230" role="img" aria-label="Left: standing ready pays the same promise every hour. Right: trading charges at the cheapest hour and discharges at a later, more expensive hour.">
+            <defs>
+              <marker id="hw-arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+            </defs>
+            <text x="165" y="22" text-anchor="middle" class="hw-t">A. Standing ready (FCR)</text>
+            <g fill="var(--bx-c1)">
+              <rect x="30" y="110" width="9" height="60" rx="2"/><rect x="41" y="118" width="9" height="52" rx="2"/><rect x="52" y="122" width="9" height="48" rx="2"/><rect x="63" y="120" width="9" height="50" rx="2"/>
+              <rect x="74" y="112" width="9" height="58" rx="2"/><rect x="85" y="100" width="9" height="70" rx="2"/><rect x="96" y="90" width="9" height="80" rx="2"/><rect x="107" y="84" width="9" height="86" rx="2"/>
+              <rect x="118" y="96" width="9" height="74" rx="2"/><rect x="129" y="104" width="9" height="66" rx="2"/><rect x="140" y="100" width="9" height="70" rx="2"/><rect x="151" y="106" width="9" height="64" rx="2"/>
+              <rect x="162" y="108" width="9" height="62" rx="2"/><rect x="173" y="104" width="9" height="66" rx="2"/><rect x="184" y="96" width="9" height="74" rx="2"/><rect x="195" y="88" width="9" height="82" rx="2"/>
+              <rect x="206" y="78" width="9" height="92" rx="2"/><rect x="217" y="66" width="9" height="104" rx="2"/><rect x="228" y="74" width="9" height="96" rx="2"/><rect x="239" y="88" width="9" height="82" rx="2"/>
+              <rect x="250" y="98" width="9" height="72" rx="2"/><rect x="261" y="106" width="9" height="64" rx="2"/><rect x="272" y="110" width="9" height="60" rx="2"/><rect x="283" y="108" width="9" height="62" rx="2"/>
+            </g>
+            <line x1="26" y1="170" x2="300" y2="170" stroke="currentColor"/>
+            <text x="30" y="188" class="hw-s">00:00</text><text x="296" y="188" text-anchor="end" class="hw-s">24:00</text>
+            <text x="165" y="210" text-anchor="middle" class="hw-s">paid each hour: price × MW promised</text>
+            <line x1="340" y1="20" x2="340" y2="210" stroke="currentColor" opacity="0.25"/>
+            <text x="515" y="22" text-anchor="middle" class="hw-t">B. Trading (day-ahead arbitrage)</text>
+            <polyline points="380,120 400,135 420,145 440,150 460,140 480,115 500,100 520,108 540,120 560,110 580,85 600,60 620,70 640,95" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <circle cx="440" cy="150" r="6" fill="var(--bx-c0)"/>
+            <circle cx="600" cy="60" r="6" fill="var(--bx-c1)"/>
+            <text x="440" y="172" text-anchor="middle" class="hw-s">charge when cheap</text>
+            <text x="600" y="46" text-anchor="middle" class="hw-s">discharge when dear</text>
+            <path d="M452,146 Q520,90 588,64" fill="none" stroke="currentColor" stroke-dasharray="4 3" marker-end="url(#hw-arr2)"/>
+            <line x1="376" y1="170" x2="644" y2="170" stroke="currentColor"/>
+            <text x="380" y="188" class="hw-s">00:00</text><text x="640" y="188" text-anchor="end" class="hw-s">24:00</text>
+            <text x="515" y="210" text-anchor="middle" class="hw-s">earn the price gap, minus energy lost</text>
+          </svg>
+          <figcaption>A: the battery is paid for its promise every hour, whether or not it is called. B: it buys power cheap and sells it later at a higher price. One MW can't do both in the same hour.</figcaption>
+        </figure>
+        <div class="hw-formulas">
+          <div><h3>Standing ready</h3><code>revenue = price (EUR/MW/h) × MW offered × 1 h</code><p>Example: 10 EUR/MW/h × 0.5 MW = 5 EUR for that hour.</p></div>
+          <div><h3>Trading</h3><code>revenue = 0.88 MWh × sell price − 1 MWh × buy price</code><p>The battery buys 1 MWh over one hour and gets 88% back to sell. Example: buy at 20, sell at 120 EUR/MWh: 0.88 × 120 − 20 = 85.60 EUR.</p></div>
+        </div>
+      </section>
+
+      <section class="hw-sec" id="how-rule">
+        <h2>4. The rule that limits the bid</h2>
+        <p>Fingrid does not let a battery promise its full 1 MW. For every MW it offers, it must keep spare <b>energy</b> and spare <b>power</b>, so it can keep reacting and still manage its charge level. The amounts come from Table 10 of the Nordic FCR Technical Requirements (valid in Finland from 14 May 2025).</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 680 270" role="img" aria-label="FCR-N needs one hour of energy in each direction, so a half-full one-hour tank backs only half its power. Stacked FCR-D needs each direction's own power plus 20 percent for the other, so the pipe allows five sixths of its power.">
+            <text x="165" y="22" text-anchor="middle" class="hw-t">FCR-N: the TANK is the limit</text>
+            <rect x="95" y="40" width="140" height="160" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="96" y="121" width="138" height="78" rx="9" fill="var(--bx-c0)" opacity="0.35"/>
+            <line x1="95" y1="120" x2="235" y2="120" stroke="var(--bx-c0)" stroke-width="2"/>
+            <text x="165" y="76" text-anchor="middle" class="hw-s">room for</text>
+            <text x="165" y="92" text-anchor="middle" class="hw-s">1 h of charging</text>
+            <text x="165" y="156" text-anchor="middle" class="hw-s">energy for</text>
+            <text x="165" y="172" text-anchor="middle" class="hw-s">1 h of discharging</text>
+            <text x="165" y="226" text-anchor="middle" class="hw-s">each MW needs 1 h each way = 2 h per MW</text>
+            <text x="165" y="246" text-anchor="middle" class="hw-s">a 1-hour tank backs half its power</text>
+            <line x1="340" y1="20" x2="340" y2="255" stroke="currentColor" opacity="0.25"/>
+            <text x="515" y="22" text-anchor="middle" class="hw-t">FCR-D up + down: the PIPE is the limit</text>
+            <text x="380" y="70" class="hw-s">discharge side of the 1 MW pipe</text>
+            <rect x="380" y="80" width="250" height="26" rx="4" fill="none" stroke="currentColor"/>
+            <rect x="381" y="81" width="207" height="24" rx="3" fill="var(--bx-c1)" opacity="0.55"/>
+            <rect x="590" y="81" width="39" height="24" rx="3" fill="var(--bx-c2)" opacity="0.55"/>
+            <text x="484" y="98" text-anchor="middle" class="hw-s">FCR-D up bid</text>
+            <text x="380" y="140" class="hw-s">charge side of the 1 MW pipe</text>
+            <rect x="380" y="150" width="250" height="26" rx="4" fill="none" stroke="currentColor"/>
+            <rect x="381" y="151" width="207" height="24" rx="3" fill="var(--bx-c2)" opacity="0.55"/>
+            <rect x="590" y="151" width="39" height="24" rx="3" fill="var(--bx-c1)" opacity="0.55"/>
+            <text x="484" y="168" text-anchor="middle" class="hw-s">FCR-D down bid</text>
+            <text x="609" y="124" text-anchor="middle" class="hw-s">+20%</text>
+            <text x="515" y="210" text-anchor="middle" class="hw-s">bid + 20% of the other direction's bid must fit</text>
+            <text x="515" y="226" text-anchor="middle" class="hw-s">1.2 × bid ≤ 1 MW</text>
+            <text x="515" y="246" text-anchor="middle" class="hw-s">(energy needed, 20 min each way, is not the limit)</text>
+          </svg>
+          <figcaption>For our battery the largest allowed bids are <b><span data-source="assumptions" data-field="value" data-where="key=bid_fcr_n_mw">—</span> MW</b> of FCR-N and <b><span data-source="assumptions" data-field="value" data-where="key=bid_fcr_d_mw">—</span> MW</b> of FCR-D in each direction. FCR-D up and down can be sold together because frequency can't be too low and too high at the same moment.</figcaption>
+        </figure>
+        <p class="hw-callout">Why this matters: if the full 1 MW could be bid, FCR-N would earn <b><span data-source="assumptions" data-field="value" data-where="key=nameplate_fcr_n">—</span></b> and FCR-D <b><span data-source="assumptions" data-field="value" data-where="key=nameplate_fcr_d_stacked">—</span></b> EUR per MW a year, and FCR-N would look best. Under the real rules the ranking flips.</p>
+      </section>
+
+      <section class="hw-sec" id="how-disturbance">
+        <h2>5. What the battery must do in a long disturbance</h2>
+        <p class="hw-lead">FCR-D must last at least 20 minutes at full power. That is a minimum, not a finishing line: the battery keeps reacting for as long as frequency stays off.</p>
+        <p>Fingrid's requirements say the FCR response "shall remain activated as long as the frequency deviation persists", and that this applies to batteries too (Nordic FCR Technical Requirements, §3.5). The 20 minutes is how much energy the battery must hold so it can almost always last until slower reserves take over.</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 750 300" role="img" aria-label="Timeline of a disturbance. A plant trips at zero; frequency falls below 49.9 hertz; FCR-D up responds within seconds; after five minutes the grid is in alert state and the battery may not refill; slower mFRR reserves are fully active by twelve and a half minutes and frequency recovers; the battery's charge falls during the event but stays above the five-minute warning level; afterwards it refills within two hours.">
+            <defs>
+              <marker id="hw-arr5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+            </defs>
+            <!-- Time axis: 0-25 minutes at 20 px per minute, then a break and the recovery block. -->
+            <g class="hw-s" text-anchor="middle">
+              <text x="60" y="290">0</text><text x="160" y="290">5 min</text><text x="310" y="290">12.5</text><text x="460" y="290">20 min</text><text x="610" y="290">up to 2 h</text>
+            </g>
+            <line x1="60" y1="272" x2="560" y2="272" stroke="currentColor" opacity="0.4"/>
+            <line x1="575" y1="272" x2="690" y2="272" stroke="currentColor" opacity="0.4" stroke-dasharray="4 3"/>
+            <g stroke="currentColor" opacity="0.18">
+              <line x1="160" y1="20" x2="160" y2="272"/><line x1="310" y1="20" x2="310" y2="272"/><line x1="460" y1="20" x2="460" y2="272"/>
+            </g>
+            <!-- Row 1: frequency. 50.0 Hz at y=45, 49.6 Hz at y=125. -->
+            <text x="10" y="40" class="hw-t">frequency</text>
+            <line x1="60" y1="45" x2="690" y2="45" stroke="currentColor" stroke-dasharray="2 4" opacity="0.4"/>
+            <text x="694" y="49" class="hw-s">50.0</text>
+            <line x1="60" y1="65" x2="690" y2="65" stroke="var(--bx-c1)" opacity="0.6"/>
+            <text x="694" y="69" class="hw-s">49.9</text>
+            <path d="M60,45 L62,125 C80,110 100,98 140,96 C200,94 260,92 300,80 C330,62 350,50 380,46 L560,45 L690,45" fill="none" stroke="currentColor" stroke-width="2"/>
+            <text x="68" y="140" class="hw-s">a plant trips: frequency drops</text>
+            <!-- Row 2: battery charge. Reserve band and AEM warning level. -->
+            <text x="10" y="178" class="hw-t">battery</text>
+            <text x="10" y="194" class="hw-s">charge</text>
+            <rect x="60" y="232" width="630" height="34" fill="var(--bx-c1)" opacity="0.15"/>
+            <text x="565" y="228" class="hw-s">20-minute reserve</text>
+            <line x1="60" y1="258" x2="690" y2="258" stroke="var(--bx-c2)" stroke-dasharray="4 3"/>
+            <text x="565" y="254" class="hw-s">5 minutes left: AEM</text>
+            <path d="M60,178 L62,178 C120,200 200,215 300,224 C340,227 370,228 400,228 L560,228 C600,226 640,205 690,180" fill="none" stroke="var(--bx-c0)" stroke-width="2.5"/>
+            <!-- Callouts -->
+            <g class="hw-s">
+              <text x="70" y="170">seconds: FCR-D up</text>
+              <text x="70" y="184">discharges at full power</text>
+              <text x="166" y="88">alert state: no refilling</text>
+              <text x="316" y="112">mFRR fully on:</text>
+              <text x="316" y="126">frequency recovers</text>
+              <text x="582" y="160">refill with spare</text>
+              <text x="582" y="174">20% of power</text>
+            </g>
+          </svg>
+          <figcaption>A typical long event. Frequency falls when a plant trips. FCR-D up discharges within seconds and holds the line. After 5 minutes outside the normal band the grid is in "alert state": the battery may not refill itself and keeps discharging as needed. Slower mFRR reserves are fully active within 12.5 minutes and frequency comes back. The battery's charge falls, but here it stays above the warning level. Afterwards, back in the normal band, it refills using its spare 20% of power.</figcaption>
+        </figure>
+        <div class="hw-cards">
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c1)"></span><h3>Why 20 minutes</h3><p>5 minutes of normal operation (frequency outside 49.9–50.1 Hz for 5 minutes puts the grid in alert state) plus 15 minutes of full output in alert state. It sets how much energy the battery must hold: 20 minutes at its full FCR-D bid, in each direction.</p></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c2)"></span><h3>If it runs low: wind down gently</h3><p>If the event lasts so long that only 5 minutes of full output is left, the battery switches to Alert State Energy Management (AEM). It eases its output to zero over a few minutes instead of cutting out, which would jolt the grid. While in AEM it counts as not available.</p></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c0)"></span><h3>Afterwards: refill within 2 hours</h3><p>Once frequency is back between 49.9 and 50.1 Hz, the battery must restore its full capacity within 120 minutes. That is what the spare 20% of power in Table 10 is for, and why the bid is 0.833 MW rather than 1 MW.</p></div>
+        </div>
+        <p class="hw-cap">Not covered here: what being unavailable in AEM costs the owner. That is set in Fingrid's market terms, which this project has not used.</p>
+      </section>
+
+      <section class="hw-sec" id="how-strategies">
+        <h2>6. Five strategies we compare</h2>
+        <div class="hw-cards four">
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c0)"></span><h3>FCR-N only</h3><p>Offer the FCR-N bid every hour.</p><code>price(FCR-N) × FCR-N bid</code></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c1)"></span><h3>FCR-D up + down</h3><p>Offer both FCR-D products every hour.</p><code>(price up + price down) × FCR-D bid</code></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c3)"></span><h3>Day-ahead arbitrage</h3><p>One charge and one discharge a day, charge first. Each leg is one hour: four 15-minute prices since October 2025, one hourly price before.</p><code>0.88 × avg sell price − 1 × avg buy price</code></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c4)"></span><h3>FCR-D + one trade</h3><p>FCR-D every hour except one charge hour and one later sell hour. The trade is sized so FCR-D keeps its 20-minute energy reserve each way: <span data-source="assumptions" data-field="value" data-where="key=mixed_trade_mwh">—</span> MWh a day. It trades only when that beats the FCR-D income it gives up.</p><code>FCR-D day − FCR-D in 2 hours + trade</code></div>
+          <div class="hw-card"><span class="hw-tag hw-tag-dash"></span><h3>Daily best-of</h3><p>Each day, take whichever strategy earned most. Assumes we knew prices in advance: a <b>ceiling for these strategies</b>, not for every schedule (section 7).</p><code>max of the four strategies, per day</code></div>
+        </div>
+        <div class="hw-example" id="how-examples">
+          <h3>Worked example: one day, five strategies</h3>
+          <p class="hw-cap">Example prices for one day, kept round and flat so the arithmetic is easy to follow. Real prices change every hour; the benchmark does this same calculation for every hour and day in the data. Battery: 1 MW / 1 MWh, 88% round-trip efficiency.</p>
+          <div class="hw-prices">
+            <span><b>FCR-N</b> 9 EUR/MW/h, every hour</span>
+            <span><b>FCR-D up</b> 4 EUR/MW/h · <b>FCR-D down</b> 3 EUR/MW/h, every hour</span>
+            <span><b>Day-ahead</b> cheapest hour 20 EUR/MWh (03:00), dearest 120 EUR/MWh (18:00)</span>
+          </div>
+          <div class="hw-src-wrap">
+            <table class="hw-src hw-calc">
+              <thead><tr><th>Strategy</th><th>Calculation</th><th>EUR for the day</th></tr></thead>
+              <tbody>
+                <tr><td>FCR-N only</td><td>0.5 MW bid × 9 EUR/MW/h = 4.50 EUR an hour<br>× 24 hours</td><td>108.00</td></tr>
+                <tr><td>FCR-D up + down</td><td>0.833 MW bid × (4 + 3) EUR/MW/h = 5.83 EUR an hour<br>× 24 hours</td><td>140.00</td></tr>
+                <tr><td>Day-ahead arbitrage</td><td>sell 0.88 MWh × 120 = 105.60<br>− buy 1 MWh × 20 = 20.00</td><td>85.60</td></tr>
+                <tr><td>FCR-D + one trade</td><td>FCR-D all day 140.00<br>− FCR-D given up in the 2 trading hours: 2 × 5.83 = 11.67<br>+ trade of 0.444 MWh: sell 0.391 MWh × 120 = 46.93, − buy 0.444 MWh × 20 = 8.89 → 38.04<br>The trade (38.04) beats the FCR-D it replaces (11.67), so the battery trades.</td><td>166.38</td></tr>
+                <tr><td>Daily best-of</td><td>the highest of the four rows above, picked with hindsight</td><td>166.38</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hw-cap">Revenue is reported per MW of battery power, so for this 1 MW battery the euro figures are also EUR per MW. A year of such days would be summed, and a period shorter than a year is scaled to 365 days ("annualised").</p>
+        </div>
+      </section>
+
+      <section class="hw-sec" id="how-day">
+        <h2>7. How the strategies fit into one day</h2>
+        <p class="hw-lead">A battery can't sell the same MW twice. It decides, the day before, which hours (or which part of its power) go to reserves and which go to trading.</p>
+        <p>The markets run in a fixed order. Day-ahead energy prices are known first, so the owner can pick the hours worth trading and offer the rest of the day to FCR. Each FCR price is per hour, so the battery can be in FCR at 14:00 and trading at 18:00.</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 700 190" role="img" aria-label="Timeline of the day before delivery: the day-ahead auction closes at noon CET, its prices follow, then FCR bids are made and Fingrid publishes the accepted FCR prices in the evening. On the delivery day the battery follows its plan, FCR reacts to frequency, and intraday trades top up its charge.">
+            <defs>
+              <marker id="hw-arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+            </defs>
+            <text x="20" y="22" class="hw-t">Day before delivery (D-1)</text>
+            <text x="470" y="22" class="hw-t">Delivery day (D)</text>
+            <line x1="20" y1="80" x2="680" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#hw-arr4)"/>
+            <line x1="455" y1="34" x2="455" y2="170" stroke="currentColor" stroke-dasharray="4 3" opacity="0.6"/>
+            <text x="455" y="182" text-anchor="middle" class="hw-s">midnight</text>
+            <circle cx="70" cy="80" r="6" fill="var(--bx-c3)"/>
+            <text x="70" y="104" text-anchor="middle" class="hw-t">12:00 CET</text>
+            <text x="70" y="120" text-anchor="middle" class="hw-s">day-ahead auction</text>
+            <text x="70" y="134" text-anchor="middle" class="hw-s">closes</text>
+            <circle cx="170" cy="80" r="6" fill="var(--bx-c3)"/>
+            <text x="170" y="104" text-anchor="middle" class="hw-t">afternoon</text>
+            <text x="170" y="120" text-anchor="middle" class="hw-s">tomorrow's energy</text>
+            <text x="170" y="134" text-anchor="middle" class="hw-s">prices are known</text>
+            <circle cx="275" cy="80" r="6" fill="var(--bx-c1)"/>
+            <text x="275" y="104" text-anchor="middle" class="hw-t">evening</text>
+            <text x="275" y="120" text-anchor="middle" class="hw-s">FCR bids for the</text>
+            <text x="275" y="134" text-anchor="middle" class="hw-s">hours not traded</text>
+            <circle cx="385" cy="80" r="6" fill="var(--bx-c1)"/>
+            <text x="385" y="104" text-anchor="middle" class="hw-t">22:45 EET</text>
+            <text x="385" y="120" text-anchor="middle" class="hw-s">Fingrid publishes</text>
+            <text x="385" y="134" text-anchor="middle" class="hw-s">accepted FCR</text>
+            <rect x="470" y="40" width="200" height="26" rx="6" fill="var(--bx-c1)" opacity="0.25"/>
+            <text x="570" y="57" text-anchor="middle" class="hw-s">FCR hours: react to frequency</text>
+            <rect x="470" y="94" width="200" height="26" rx="6" fill="var(--bx-c3)" opacity="0.25"/>
+            <text x="570" y="111" text-anchor="middle" class="hw-s">trade hours: charge, then sell</text>
+            <text x="570" y="146" text-anchor="middle" class="hw-s">intraday trades fix the charge level</text>
+            <text x="570" y="160" text-anchor="middle" class="hw-s">so FCR always has headroom</text>
+          </svg>
+          <figcaption>The trading decision comes first because day-ahead prices are published first. FCR is bought hour by hour, so the hours not used for trading can still earn FCR. During the day, small intraday trades keep the battery at a charge level where it can react in both directions. Fingrid's requirements recommend using the intraday market for this.</figcaption>
+        </figure>
+
+        <p>There are three ways to combine the strategies in one day. This benchmark uses the simplest one.</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 700 300" role="img" aria-label="Three 24-hour schedules. A: the benchmark picks one strategy for the whole day, either FCR-D all day or one trade. B: hour by hour, FCR-D runs all day except one charging hour and one selling hour. C: the power is split, part in FCR-D all day and part trading.">
+            <g class="hw-s" text-anchor="middle">
+              <text x="190" y="20">00:00</text><text x="295" y="20">06:00</text><text x="400" y="20">12:00</text><text x="505" y="20">18:00</text><text x="610" y="20">24:00</text>
+            </g>
+            <g stroke="currentColor" opacity="0.18">
+              <line x1="190" y1="28" x2="190" y2="290"/><line x1="295" y1="28" x2="295" y2="290"/><line x1="400" y1="28" x2="400" y2="290"/><line x1="505" y1="28" x2="505" y2="290"/><line x1="610" y1="28" x2="610" y2="290"/>
+            </g>
+            <text x="10" y="52" class="hw-t">A. This benchmark</text>
+            <text x="10" y="68" class="hw-s">one strategy for the</text>
+            <text x="10" y="82" class="hw-s">whole day, picked daily</text>
+            <rect x="190" y="40" width="420" height="20" rx="4" fill="var(--bx-c1)" opacity="0.8"/>
+            <text x="400" y="54" text-anchor="middle" class="hw-s" style="fill: var(--color-bg)">FCR-D all day</text>
+            <text x="400" y="78" text-anchor="middle" class="hw-s">or</text>
+            <rect x="190" y="86" width="420" height="20" rx="4" fill="none" stroke="currentColor" stroke-dasharray="3 3" opacity="0.4"/>
+            <rect x="242" y="86" width="18" height="20" rx="3" fill="var(--bx-c3)"/>
+            <rect x="505" y="86" width="18" height="20" rx="3" fill="var(--bx-c3)"/>
+            <text x="251" y="122" text-anchor="middle" class="hw-s">charge</text>
+            <text x="514" y="122" text-anchor="middle" class="hw-s">sell</text>
+            <text x="400" y="100" text-anchor="middle" class="hw-s">idle</text>
+
+            <text x="10" y="160" class="hw-t">B. Hour by hour (modelled)</text>
+            <text x="10" y="176" class="hw-s">FCR-D most hours,</text>
+            <text x="10" y="190" class="hw-s">trade in the best two</text>
+            <rect x="190" y="160" width="52" height="20" rx="4" fill="var(--bx-c1)" opacity="0.8"/>
+            <rect x="242" y="160" width="18" height="20" rx="3" fill="var(--bx-c3)"/>
+            <rect x="260" y="160" width="245" height="20" rx="4" fill="var(--bx-c1)" opacity="0.8"/>
+            <rect x="505" y="160" width="18" height="20" rx="3" fill="var(--bx-c3)"/>
+            <rect x="523" y="160" width="87" height="20" rx="4" fill="var(--bx-c1)" opacity="0.8"/>
+            <text x="251" y="196" text-anchor="middle" class="hw-s">charge</text>
+            <text x="514" y="196" text-anchor="middle" class="hw-s">sell</text>
+
+            <text x="10" y="236" class="hw-t">C. Split the power</text>
+            <text x="10" y="252" class="hw-s">part FCR-D all day,</text>
+            <text x="10" y="266" class="hw-s">part trading</text>
+            <rect x="190" y="226" width="420" height="12" rx="3" fill="var(--bx-c1)" opacity="0.8"/>
+            <rect x="190" y="242" width="420" height="12" rx="3" fill="none" stroke="currentColor" stroke-dasharray="3 3" opacity="0.4"/>
+            <rect x="242" y="242" width="18" height="12" rx="2" fill="var(--bx-c3)"/>
+            <rect x="505" y="242" width="18" height="12" rx="2" fill="var(--bx-c3)"/>
+            <text x="620" y="236" class="hw-s">reserve MW</text>
+            <text x="620" y="252" class="hw-s">trading MW</text>
+            <text x="400" y="282" text-anchor="middle" class="hw-s">each part keeps its own Table 10 headroom</text>
+          </svg>
+          <figcaption>Long bars: the battery's MW are promised to FCR-D. Short blocks: the same MW are charging or selling energy instead. A MW is never in both at once. In B, the hours the battery trades are the hours it gives up FCR income for.</figcaption>
+        </figure>
+
+        <figure class="hw-fig" id="how-motion">
+          <h3>Watch one day of schedule B</h3>
+          <p class="hw-cap">Press play, or drag the slider. The bar shows what the battery's MW are doing each hour; the tank shows how full the battery is. The two shaded bands in the tank are the energy Fingrid's Table 10 makes it keep for FCR-D. The battery only trades the energy between them.</p>
+          <div class="mo-controls">
+            <button type="button" class="mo-play" id="mo-play" aria-controls="mo-svg">Play</button>
+            <input type="range" id="mo-hour" min="0" max="24" step="0.05" value="0" aria-label="Hour of the day" aria-valuetext="00:00">
+            <output id="mo-clock" for="mo-hour">00:00</output>
+          </div>
+          <div class="mo-box" data-source="assumptions">
+          <svg id="mo-svg" viewBox="0 0 770 250" role="img" aria-label="Animated day: the battery offers FCR-D in every hour except a charging hour at 03:00 and a selling hour at 18:00. Its charge rises in the charging hour and falls in the selling hour, but always stays between the two energy reserves FCR-D needs, so it can stay in FCR-D in all the other hours.">
+            <g class="hw-s" text-anchor="middle">
+              <text x="40" y="22">00:00</text><text x="160" y="22">06:00</text><text x="280" y="22">12:00</text><text x="400" y="22">18:00</text><text x="520" y="22">24:00</text>
+            </g>
+            <rect x="40" y="34" width="60" height="26" rx="4" fill="var(--bx-c1)" opacity="0.85"/>
+            <rect x="100" y="34" width="20" height="26" rx="3" fill="var(--bx-c3)"/>
+            <rect x="120" y="34" width="280" height="26" rx="4" fill="var(--bx-c1)" opacity="0.85"/>
+            <rect x="400" y="34" width="20" height="26" rx="3" fill="var(--bx-c3)"/>
+            <rect x="420" y="34" width="100" height="26" rx="4" fill="var(--bx-c1)" opacity="0.85"/>
+            <text x="110" y="76" text-anchor="middle" class="hw-s">charge</text>
+            <text x="410" y="76" text-anchor="middle" class="hw-s">sell</text>
+            <text x="260" y="51" text-anchor="middle" class="hw-s mo-onbar">FCR-D: standing ready</text>
+            <!-- Charge level over the day, drawn by script from the battery's reserves. -->
+            <text x="40" y="104" class="hw-s">charge level through the day</text>
+            <rect x="40" y="110" width="480" height="110" rx="4" fill="none" stroke="currentColor" opacity="0.2"/>
+            <rect id="mo-band-top" x="40" y="110" width="480" height="0" fill="var(--bx-c2)" opacity="0.18"/>
+            <rect id="mo-band-bot" x="40" y="220" width="480" height="0" fill="var(--bx-c1)" opacity="0.18"/>
+            <path id="mo-path" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" opacity="0.35"/>
+            <path id="mo-path-done" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+            <line id="mo-head" x1="40" x2="40" y1="30" y2="222" stroke="currentColor" stroke-width="1.5"/>
+            <circle id="mo-dot" cx="40" cy="200" r="5" fill="currentColor"/>
+            <!-- The tank: same scale as the chart, so the level matches the line. -->
+            <text x="615" y="104" text-anchor="middle" class="hw-s">battery</text>
+            <rect x="575" y="110" width="80" height="110" rx="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <rect id="mo-tank-top" x="576" y="111" width="78" height="0" fill="var(--bx-c2)" opacity="0.25"/>
+            <rect id="mo-tank-bot" x="576" y="219" width="78" height="0" fill="var(--bx-c1)" opacity="0.25"/>
+            <rect id="mo-fill" x="579" y="200" width="72" height="18" rx="5" fill="var(--bx-c0)" opacity="0.7"/>
+            <text id="mo-lbl-top" x="665" y="120" class="hw-s">room kept for</text>
+            <text id="mo-lbl-top2" x="665" y="134" class="hw-s">FCR-D down</text>
+            <text id="mo-lbl-bot" x="665" y="204" class="hw-s">energy kept</text>
+            <text id="mo-lbl-bot2" x="665" y="218" class="hw-s">for FCR-D up</text>
+            <text x="615" y="240" text-anchor="middle" class="hw-s">full = top</text>
+          </svg>
+          <p class="mo-status" id="mo-status" aria-live="polite">00:00 · FCR-D: the battery is standing ready in both directions.</p>
+          </div>
+          <figcaption>An illustrative day: the charge and sell hours here are examples; in the data each day uses its own cheapest and dearest hours. The trade is <b><span data-source="assumptions" data-field="value" data-where="key=mixed_trade_mwh">—</span> MWh</b>: the battery's <span data-source="assumptions" data-field="value" data-where="key=energy_mwh">—</span> MWh minus the two reserves. Because the charge never leaves the space between the bands, the battery can stay in FCR-D in every hour it isn't trading.</figcaption>
+        </figure>
+
+        <div class="hw-cards">
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c1)"></span><h3>Why not do both at full size?</h3><p>A promised MW has to stay available. And a battery that has just charged to full has no room to absorb power for FCR-D down, so trading changes what FCR it can offer in the next hours.</p></div>
+          <div class="hw-card"><span class="hw-tag" style="background: var(--bx-c0)"></span><h3>Why FCR-N and trading clash most</h3><p>FCR-N needs one hour of energy in each direction, so it wants the battery half full all hour. A trade pushes the charge level to one end.</p></div>
+          <div class="hw-card"><span class="hw-tag hw-tag-dash"></span><h3>What the benchmark models</h3><p>Whole-day strategies (schedule A) and schedule B as "FCR-D + one trade". Splitting the power (C) or trading more than once a day is not modelled, so the daily best-of is a ceiling for the modelled strategies, not for every schedule.</p></div>
+        </div>
+      </section>
+
+      <section class="hw-sec" id="how-pipeline">
+        <h2>8. How every number is made</h2>
+        <p>One command runs every step below and rebuilds every figure from scratch.</p>
+        <figure class="hw-fig">
+          <svg viewBox="0 0 720 330" role="img" aria-label="The pipeline: Fingrid API to raw monthly files, to checks, to clean hourly prices in CET. Then revenue per hour from price times bid, using the battery inputs and Table 10 rules, then per market day with the daily best-of, then per month and year, then the dashboard, CSV and JSON outputs.">
+            <defs>
+              <marker id="hw-arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+            </defs>
+            <g class="hw-box">
+              <rect x="10" y="40" width="150" height="64" rx="8"/><rect x="200" y="40" width="150" height="64" rx="8"/><rect x="390" y="40" width="150" height="64" rx="8"/><rect x="560" y="40" width="150" height="64" rx="8"/>
+              <rect x="560" y="200" width="150" height="64" rx="8"/><rect x="390" y="200" width="150" height="64" rx="8"/><rect x="200" y="200" width="150" height="64" rx="8"/><rect x="10" y="200" width="150" height="64" rx="8"/>
+            </g>
+            <text x="85" y="66" text-anchor="middle" class="hw-t">1 Extract</text><text x="85" y="84" text-anchor="middle" class="hw-s">Fingrid + ENTSO-E APIs</text>
+            <text x="275" y="66" text-anchor="middle" class="hw-t">Raw files</text><text x="275" y="84" text-anchor="middle" class="hw-s">one per month, UTC</text>
+            <text x="465" y="66" text-anchor="middle" class="hw-t">2 Validate</text><text x="465" y="84" text-anchor="middle" class="hw-s">6 checks, flag spikes</text>
+            <text x="635" y="66" text-anchor="middle" class="hw-t">3 Transform</text><text x="635" y="84" text-anchor="middle" class="hw-s">one price table, CET</text>
+            <text x="635" y="226" text-anchor="middle" class="hw-t">4 Revenue</text><text x="635" y="244" text-anchor="middle" class="hw-s">FCR bids + trading</text>
+            <text x="465" y="226" text-anchor="middle" class="hw-t">Per market day</text><text x="465" y="244" text-anchor="middle" class="hw-s">sum + daily best-of</text>
+            <text x="275" y="226" text-anchor="middle" class="hw-t">Months and years</text><text x="275" y="244" text-anchor="middle" class="hw-s">sum, annualise</text>
+            <text x="85" y="226" text-anchor="middle" class="hw-t">5 Report</text><text x="85" y="244" text-anchor="middle" class="hw-s">dashboard, CSV, JSON</text>
+            <g stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#hw-arr3)">
+              <line x1="160" y1="72" x2="198" y2="72"/><line x1="350" y1="72" x2="388" y2="72"/><line x1="540" y1="72" x2="558" y2="72"/>
+              <line x1="635" y1="104" x2="635" y2="198"/>
+              <line x1="560" y1="232" x2="542" y2="232"/><line x1="390" y1="232" x2="352" y2="232"/><line x1="200" y1="232" x2="162" y2="232"/>
+            </g>
+            <text x="180" y="62" text-anchor="middle" class="hw-s">save</text>
+            <text x="369" y="62" text-anchor="middle" class="hw-s">read</text>
+            <text x="646" y="150" class="hw-s">clean table</text>
+            <text x="371" y="222" text-anchor="middle" class="hw-s">group</text>
+            <rect x="420" y="130" width="160" height="40" rx="8" fill="none" stroke="currentColor" stroke-dasharray="4 3"/>
+            <text x="500" y="148" text-anchor="middle" class="hw-s">params.toml: battery size</text>
+            <text x="500" y="163" text-anchor="middle" class="hw-s">+ Table 10 rules</text>
+            <path d="M580,150 L602,150 Q612,150 612,160 L612,198" fill="none" stroke="currentColor" stroke-dasharray="4 3" stroke-width="1.5" marker-end="url(#hw-arr3)"/>
+            <text x="360" y="300" text-anchor="middle" class="hw-s">Prices are never changed: spikes are flagged, not removed. Negative prices are kept.</text>
+          </svg>
+          <figcaption>Each box is one step of the pipeline. The dashed box holds the inputs you can change: battery size, periods, efficiency and availability. The bid sizes are calculated from them using Fingrid's rules.</figcaption>
+        </figure>
+        <div class="hw-steps">
+          <div><h3>1 Extract</h3><p>Downloads hourly prices for FCR-N (dataset 317), FCR-D up (318) and FCR-D down (283) from Fingrid, and Finnish day-ahead prices from ENTSO-E, one file per month. Months already on disk are skipped.</p></div>
+          <div><h3>2 Validate</h3><p>Checks: timestamps are explicit UTC, no duplicate intervals, every day complete, no gaps, and spikes above the 99.9th percentile flagged. Day-ahead prices switching from hourly to 15-minute steps on 1 Oct 2025 is flagged as expected. A wrong time zone or a duplicate stops the run.</p></div>
+          <div><h3>3 Transform</h3><p>Turns the raw rows into one table, <code>time · product · price · unit</code>, in CET: the market's own clock. FCR prices are hourly; day-ahead prices keep their 15-minute steps.</p></div>
+          <div><h3>4 Revenue</h3><p>FCR: price × bid for every hour, summed by CET market day. Arbitrage: the best one-hour buy block followed by a later one-hour sell block, each day. FCR-D + one trade: FCR-D in all hours but the best charge and sell hour, using hourly day-ahead prices. Then the daily best-of is picked, and everything is summed by month and year.</p></div>
+          <div><h3>5 Report</h3><p>Writes the monthly table, a summary file and the charts. "Annualised" means a period's revenue scaled to 365 days, so part years compare fairly.</p></div>
+        </div>
+      </section>
+
+      <section class="hw-sec" id="how-results">
+        <h2>9. What we found</h2>
+        <div class="hw-results">
+          <div class="hw-result"><span class="hw-num" data-source="headline" data-field="last12" data-where="strategy=mixed">—</span><span class="hw-cap">EUR per MW from FCR-D plus one daily trade in <span data-source="headline" data-field="window" data-where="strategy=mixed">—</span>. The best single strategy.</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="headline" data-field="last12" data-where="strategy=fcr_d_stacked">—</span><span class="hw-cap">EUR per MW from FCR-D up + down alone, every hour.</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="headline" data-field="last12" data-where="strategy=fcr_n">—</span><span class="hw-cap">EUR per MW from FCR-N over the same months. Higher price per MW, but only half the battery can be offered.</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="headline" data-field="last12" data-where="strategy=arbitrage">—</span><span class="hw-cap">EUR per MW from day-ahead trading. Smaller, but it has held steady while reserve prices fell.</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="headline" data-field="last12" data-where="strategy=best_of">—</span><span class="hw-cap">EUR per MW if we always picked the best strategy each day. The ceiling for the modelled strategies, not a forecast.</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="vs_peak" data-field="change_pct" data-row="0">—</span><span class="hw-cap">That ceiling against its <span data-source="vs_peak" data-field="peak_year" data-row="0">—</span> peak of <span data-source="vs_peak" data-field="peak" data-row="0">—</span> EUR per MW. Batteries have crowded into these small markets and pushed prices down.</span></div>
+        </div>
+        <p>FCR-D up pays most in the evening, around 18:00 CET. In late summer 2026, FCR-N started winning more days than FCR-D, and by the third quarter of 2026 it earned more over the whole quarter. The <a href="#results" class="hw-tablink" data-tab="results">Results tab</a> has the charts.</p>
+      </section>
+
+      <section class="hw-sec" id="how-limits">
+        <h2>10. Limits: what these numbers leave out</h2>
+        <ul class="hw-list">
+          <li><b>Perfect foresight.</b> Real bids are placed the day before prices are known. The best-of and the arbitrage figures are ceilings.</li>
+          <li><b>Only the modelled schedules.</b> Splitting the power between FCR and trading, or trading more than once a day, is not modelled and could earn more (section 7).</li>
+          <li><b>Full availability.</b> No maintenance or outages.</li>
+          <li><b>No bidding risk.</b> Every bid is assumed to be accepted at the clearing price.</li>
+          <li><b>No costs.</b> No battery wear, grid fees or market fees.</li>
+          <li><b>Capacity payments only.</b> Payment for energy actually delivered during activations is not counted.</li>
+          <li><b>Hourly FCR market and day-ahead only.</b> The yearly FCR market, aFRR, mFRR and intraday trading are not modelled.</li>
+          <li><b>Today's rules for every year.</b> The 2025 bid limits are used for 2022–2025 too, so years compare like for like.</li>
+        </ul>
+      </section>
+
+      <section class="hw-sec" id="how-glossary">
+        <h2>11. Glossary</h2>
+        <dl class="hw-gloss">
+          <div><dt>MW (megawatt)</dt><dd>Power: how fast energy flows. The width of the pipe.</dd></div>
+          <div><dt>MWh (megawatt-hour)</dt><dd>Energy: 1 MW flowing for 1 hour. The size of the tank.</dd></div>
+          <div><dt>BESS</dt><dd>Battery energy storage system: a grid-connected battery.</dd></div>
+          <div><dt>Fingrid</dt><dd>Finland's transmission system operator (TSO). It runs the high-voltage grid and buys reserves.</dd></div>
+          <div><dt>Frequency (Hz)</dt><dd>How fast the grid's AC current alternates. 50 Hz means supply matches demand.</dd></div>
+          <div><dt>FCR</dt><dd>Frequency Containment Reserve: capacity that reacts automatically within seconds to stop frequency drifting.</dd></div>
+          <div><dt>FCR-N</dt><dd>The "normal" reserve. Acts continuously, both directions, within 49.9–50.1 Hz.</dd></div>
+          <div><dt>FCR-D up / down</dt><dd>The "disturbance" reserves. Up discharges below 49.9 Hz, down charges above 50.1 Hz.</dd></div>
+          <div><dt>Capacity payment</dt><dd>Money for promising to be available, paid whether or not the reserve is used.</dd></div>
+          <div><dt>Clearing price</dt><dd>The hourly price Fingrid pays every accepted bid, set by the most expensive bid it accepts.</dd></div>
+          <div><dt>EUR/MW/h</dt><dd>Price per MW promised, per hour. 10 EUR/MW/h on 0.5 MW for one hour pays 5 EUR.</dd></div>
+          <div><dt>Bid</dt><dd>How many MW the battery offers into a product for an hour.</dd></div>
+          <div><dt>Limited energy reservoir (LER)</dt><dd>Fingrid's term for a unit with small storage, like a battery. LER units must keep the spare energy and power in Table 10.</dd></div>
+          <div><dt>Table 10</dt><dd>The table in the Nordic FCR Technical Requirements listing how much spare power and energy each MW of FCR needs.</dd></div>
+          <div><dt>Alert state</dt><dd>What the grid is in after frequency has been outside 49.9–50.1 Hz for 5 minutes. Batteries may not refill themselves then.</dd></div>
+          <div><dt>AEM (Alert State Energy Management)</dt><dd>A battery that is nearly empty in a long event eases its FCR output to zero gently instead of cutting out. It then counts as not available.</dd></div>
+          <div><dt>Refilling (energy management)</dt><dd>After an event, the battery moves its charge back into the safe zone, using its spare 20% of power. Fingrid calls this Normal State Energy Management (NEM).</dd></div>
+          <div><dt>mFRR</dt><dd>Manual Frequency Restoration Reserve: slower reserves the grid operator activates. They take over from FCR-D within about 12.5 minutes.</dd></div>
+          <div><dt>Stacking</dt><dd>Selling FCR-D up and FCR-D down from the same battery in the same hour. Allowed, with both reservations added.</dd></div>
+          <div><dt>Day-ahead market</dt><dd>The auction, run the day before, that sets a price for every 15 minutes (every hour before October 2025) of the next day.</dd></div>
+          <div><dt>Day-ahead arbitrage</dt><dd>Buying energy in a cheap hour and selling it in a dearer hour of the same day.</dd></div>
+          <div><dt>ENTSO-E</dt><dd>The association of European grid operators. Its Transparency Platform publishes day-ahead prices.</dd></div>
+          <div><dt>Round-trip efficiency</dt><dd>Share of energy you get back after charging and discharging. 88% means 12% is lost.</dd></div>
+          <div><dt>Perfect foresight</dt><dd>Assuming all prices are known in advance. Gives the most the modelled strategies could earn, not a forecast.</dd></div>
+          <div><dt>Annualised</dt><dd>Revenue scaled to a full 365-day year, so part years compare fairly.</dd></div>
+          <div><dt>Saturation</dt><dd>When so many batteries offer into a small market that its prices fall.</dd></div>
+          <div><dt>CET</dt><dd>Central European Time (CEST in summer): the clock the Nordic market days run on.</dd></div>
+          <div><dt>YTD</dt><dd>Year to date: from 1 January to the latest month with data.</dd></div>
+        </dl>
+      </section>
+
+      <section class="hw-sec" id="how-sources">
+        <h2>12. Sources</h2>
+        <div class="hw-src-wrap">
+        <table class="hw-src">
+          <thead><tr><th>Source</th><th>Used for</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://data.fingrid.fi/en/datasets/317" target="_blank" rel="noopener">Fingrid open data 317</a>, <a href="https://data.fingrid.fi/en/datasets/318" target="_blank" rel="noopener">318</a>, <a href="https://data.fingrid.fi/en/datasets/283" target="_blank" rel="noopener">283</a></td><td>Hourly prices for FCR-N, FCR-D up and FCR-D down (CC BY 4.0)</td></tr>
+            <tr><td><a href="https://data.fingrid.fi/en/instructions" target="_blank" rel="noopener">Fingrid open data API instructions</a></td><td>How to download: endpoint, key header, rate limit, UTC timestamps</td></tr>
+            <tr><td><a href="https://transparency.entsoe.eu/" target="_blank" rel="noopener">ENTSO-E Transparency Platform</a></td><td>Finnish day-ahead prices (article 12.1.D), hourly then 15-minute</td></tr>
+            <tr><td><a href="https://transparencyplatform.zendesk.com/hc/en-us/articles/15692855254548-Sitemap-for-Restful-API-Integration" target="_blank" rel="noopener">ENTSO-E Restful API guide</a></td><td>Endpoint, token, UTC times, one-year request limit, rate limits</td></tr>
+            <tr><td><a href="https://www.fingrid.fi/globalassets/dokumentit/fi/sahkomarkkinat/reservit/technical-requirements-for-frequency-containment-reserve-provision-in-the-nordic-synchronous-area_14.5.2025.pdf" target="_blank" rel="noopener">Nordic FCR Technical Requirements v1.1</a></td><td>Table 10: spare power and energy per MW; stacking rule; endurance</td></tr>
+            <tr><td><a href="https://www.fingrid.fi/globalassets/dokumentit/fi/sahkomarkkinat/reservit/batteries-in-the-nordic-reserve-markets-april-2025.pdf" target="_blank" rel="noopener">Batteries in the Nordic reserve markets (April 2025)</a></td><td>How each product activates; FCR-D up and down at once is allowed</td></tr>
+            <tr><td><a href="https://olana.fi/blog-posts/the-merchant-bess-business-case" target="_blank" rel="noopener">Olana (May 2026)</a>, <a href="https://www.solarplaza.com/resource/13522/article-finlands-bess-market-beyond-the-gold-rush-2026/" target="_blank" rel="noopener">Solarplaza (July 2026)</a>, <a href="https://www.rabobank.com/knowledge/d011535313-backup-power-for-europe-part-8-ranking-bess-market-attractivity-in-the-nordics" target="_blank" rel="noopener">RaboResearch (July 2026)</a></td><td>Market context: battery build-out and reserve-market saturation</td></tr>
+            <tr><td><a href="https://github.com/Tarun1297/nordic-bess-revenue" target="_blank" rel="noopener">nordic-bess-revenue on GitHub</a></td><td>The code behind every number on this dashboard</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+    </div>
+  </section>
+</div>
+
+<script>
+// Calculations: every figure on the page is worked out here from the attached files.
+dash.calc("headline", {
+  inputs: ["monthly"],
+  title: "Last 12 months vs prior 12",
+  description: "Sum of each strategy over the last 12 months in the file, and its change from the 12 months before.",
+  fn: (monthly) => {
+    const rows = monthly.map((r) => ({ month: r.month, fcr_n: +r.fcr_n, fcr_d_stacked: +r.fcr_d_stacked, arbitrage: +r.arbitrage, mixed: +r.fcr_d_plus_trade, best_of: +r.best_of }))
+      .sort((a, b) => (a.month < b.month ? -1 : 1));
+    const last = rows.slice(-12), prev = rows.slice(-24, -12);
+    const sum = (rs, k) => rs.reduce((s, r) => s + r[k], 0);
+    const label = (m) => new Date(m + "-01T00:00:00Z").toLocaleDateString("en", { month: "short", year: "numeric", timeZone: "UTC" });
+    return ["fcr_d_stacked", "fcr_n", "arbitrage", "mixed", "best_of"].map((k) => ({
+      strategy: k,
+      last12: Math.round(sum(last, k)),
+      prev12: Math.round(sum(prev, k)),
+      change_pct: Math.round((sum(last, k) / sum(prev, k) - 1) * 1000) / 10,
+      window: label(last[0].month) + " – " + label(last[last.length - 1].month),
+    }));
+  },
+});
+
+dash.calc("yearly", {
+  inputs: ["monthly"],
+  title: "Annualised by calendar year",
+  description: "Each calendar year's revenue divided by its days and scaled to 365; 2026 is year to date.",
+  fn: (monthly) => {
+    const by = {};
+    for (const r of monthly) {
+      const y = r.month.slice(0, 4);
+      by[y] = by[y] || { year: y, fcr_n: 0, fcr_d_stacked: 0, arbitrage: 0, mixed: 0, best_of: 0, days: 0 };
+      by[y].fcr_n += +r.fcr_n; by[y].fcr_d_stacked += +r.fcr_d_stacked; by[y].arbitrage += +r.arbitrage;
+      by[y].mixed += +r.fcr_d_plus_trade;
+      by[y].best_of += +r.best_of; by[y].days += +r.days;
+    }
+    return Object.values(by).sort((a, b) => (a.year < b.year ? -1 : 1)).map((y) => ({
+      year: y.year,
+      fcr_n: Math.round((y.fcr_n / y.days) * 365),
+      fcr_d_stacked: Math.round((y.fcr_d_stacked / y.days) * 365),
+      arbitrage: Math.round((y.arbitrage / y.days) * 365),
+      mixed: Math.round((y.mixed / y.days) * 365),
+      best_of: Math.round((y.best_of / y.days) * 365),
+      days: y.days,
+      full_year: y.days >= 365,
+    }));
+  },
+});
+
+dash.calc("quarterly", {
+  inputs: ["monthly"],
+  title: "Revenue by quarter",
+  description: "Sum of each strategy's monthly revenue per calendar quarter, with the days behind it.",
+  fn: (monthly) => {
+    const by = {};
+    for (const r of monthly) {
+      const q = r.month.slice(0, 4) + "Q" + Math.ceil(Number(r.month.slice(5, 7)) / 3);
+      by[q] = by[q] || { quarter: q, fcr_d_stacked: 0, fcr_n: 0, arbitrage: 0, mixed: 0, best_of: 0, days: 0 };
+      by[q].mixed += +r.fcr_d_plus_trade;
+      by[q].fcr_d_stacked += +r.fcr_d_stacked; by[q].fcr_n += +r.fcr_n;
+      by[q].arbitrage += +r.arbitrage; by[q].best_of += +r.best_of; by[q].days += +r.days;
+    }
+    return Object.values(by).sort((a, b) => (a.quarter < b.quarter ? -1 : 1)).map((q) => ({
+      quarter: q.quarter,
+      fcr_d_stacked: Math.round(q.fcr_d_stacked),
+      fcr_n: Math.round(q.fcr_n),
+      arbitrage: Math.round(q.arbitrage),
+      mixed: Math.round(q.mixed),
+      best_of: Math.round(q.best_of),
+      days: q.days,
+    }));
+  },
+});
+
+dash.calc("vs_peak", {
+  inputs: ["headline", "yearly"],
+  title: "Last 12 months vs peak year",
+  description: "Best-of revenue of the last 12 months against the best full calendar year.",
+  fn: (headline, yearly) => {
+    const full = yearly.filter((y) => y.full_year);
+    const peak = full.reduce((a, b) => (b.best_of > a.best_of ? b : a));
+    const last = headline.find((h) => h.strategy === "best_of").last12;
+    return [{ peak_year: peak.year, peak: peak.best_of, change_pct: Math.round((last / peak.best_of - 1) * 1000) / 10 }];
+  },
+});
+</script>
+
+<script>
+// Shared drawing helpers on window, so each chart script stays short.
+(() => {
+  const root = document.getElementById("dash-root");
+  const css = (v) => getComputedStyle(root).getPropertyValue(v).trim();
+  const eur = d3.format(",.0f");
+  const tip = (box) => {
+    let t = box.querySelector(".bx-tip");
+    if (!t) { t = document.createElement("div"); t.className = "bx-tip"; t.hidden = true; box.appendChild(t); }
+    return t;
+  };
+  const showTip = (box, t, x, y, head, lines) => {
+    t.replaceChildren();
+    const h = document.createElement("div"); h.className = "h"; h.textContent = head; t.appendChild(h);
+    for (const [color, name, value] of lines) {
+      const r = document.createElement("div"); r.className = "r";
+      if (color) { const s = document.createElement("i"); s.className = "bx-sw"; s.style.background = color; r.appendChild(s); }
+      const n = document.createElement("span"); n.textContent = name; r.appendChild(n);
+      const b = document.createElement("b"); b.textContent = value; r.appendChild(b);
+      t.appendChild(r);
+    }
+    t.hidden = false;
+    const w = t.offsetWidth, bw = box.clientWidth;
+    t.style.left = Math.max(0, Math.min(bw - w, x + 12)) + "px";
+    t.style.top = Math.max(0, y - t.offsetHeight - 8) + "px";
+  };
+  const textWidth = (svg, strings) => {
+    const g = svg.append("g").attr("class", "bx-axis");
+    let w = 0;
+    for (const s of strings) { const n = g.append("text").text(s).node(); w = Math.max(w, n.getComputedTextLength()); }
+    g.remove();
+    return w;
+  };
+  const failOrWait = (box, statuses) => {
+    if (statuses.some((s) => s === "error" || s === "declined")) {
+      box.replaceChildren(); const f = document.createElement("div"); f.className = "bx-fail"; f.textContent = "Failed to load"; box.appendChild(f);
+      box.classList.remove("dash-skeleton"); return true;
+    }
+    if (statuses.some((s) => s !== "ok")) { box.replaceChildren(); box.classList.add("dash-skeleton"); return true; }
+    box.classList.remove("dash-skeleton");
+    return false;
+  };
+  const colors = () => {
+    const c = dash.colors;
+    root.style.setProperty("--bx-c0", c[0]); root.style.setProperty("--bx-c1", c[1]); root.style.setProperty("--bx-c2", c[2]);
+    root.style.setProperty("--bx-c3", c[3]); root.style.setProperty("--bx-c4", c[4]);
+    return { n: c[0], d: c[1], down: c[2], arb: c[3], mix: c[4], muted: "var(--cds-chart-muted)" };
+  };
+  const charts = [];
+  // Register a chart: drawn on every data change, and again when its tab is shown.
+  const chart = (draw) => {
+    const run = () => { if (!document.getElementById("results").hidden) draw(); };
+    charts.push(run);
+    dash.onData(run);
+  };
+  const redraw = () => charts.forEach((run) => run());
+  window.bx = { css, eur, tip, showTip, textWidth, failOrWait, colors, chart, redraw };
+})();
+</script>
+
+<script>
+// Header, KPI cards and the assumptions table.
+dash.onData(() => {
+  bx.colors();
+  const a = dash.data("assumptions");
+  for (const el of document.querySelectorAll('[data-source="assumptions"][data-field], [data-source="headline"], [data-source="vs_peak"]')) {
+    const src = el.dataset.source, d = dash.data(src);
+    if (d.status !== "ok") { el.textContent = "—"; continue; }
+    el.classList.remove("dash-skeleton");
+    const field = el.dataset.field;
+    let v;
+    if (src === "headline" || src === "assumptions") {
+      const [col, key] = (el.dataset.where || "").split("=");
+      const row = d.data.find((r) => String(r[col]) === key);
+      v = row ? row[field] : undefined;
+    } else { v = d.data[0] ? d.data[0][field] : undefined; }
+    if (v === undefined) { el.textContent = "—"; continue; }
+    if (field === "change_pct") {
+      const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+      el.textContent = `${sign}${Math.abs(v)}%`;
+      const wrap = el.closest(".bx-delta");
+      if (wrap) { wrap.classList.toggle("up", v > 0); wrap.classList.toggle("down", v < 0); }
+    } else if (field !== "peak_year" && (field === "last12" || field === "peak" || Number(v) >= 1000)) {
+      el.textContent = bx.eur(Number(v));
+    } else { el.textContent = String(v); }
+  }
+  const body = document.getElementById("assumptions-body");
+  body.replaceChildren();
+  if (a.status === "ok") {
+    for (const r of a.data) {
+      const tr = document.createElement("tr"); tr.dataset.key = r.key;
+      const l = document.createElement("td"); l.textContent = r.label;
+      const v = document.createElement("td");
+      const n = Number(r.value);
+      v.textContent = n >= 1000 ? bx.eur(n) : String(r.value);
+      tr.append(l, v); body.appendChild(tr);
+    }
+  }
+});
+</script>
+
+<script>
+// Monthly revenue lines, January 2022 to the latest month.
+bx.chart(() => {
+  const box = document.getElementById("chart-monthly");
+  const d = dash.data("monthly");
+  if (bx.failOrWait(box, [d.status])) return;
+  const c = bx.colors();
+  const rows = d.data.map((r) => ({ month: r.month, date: new Date(r.month + "-01T00:00:00Z"), fcr_n: +r.fcr_n, fcr_d_stacked: +r.fcr_d_stacked, arbitrage: +r.arbitrage, mixed: +r.fcr_d_plus_trade, best_of: +r.best_of }))
+    .sort((a, b) => a.date - b.date);
+  const series = [
+    { key: "fcr_d_stacked", name: "FCR-D up + down", color: c.d, dash: null },
+    { key: "fcr_n", name: "FCR-N", color: c.n, dash: null },
+    { key: "arbitrage", name: "Arbitrage", color: c.arb, dash: null },
+    { key: "mixed", name: "FCR-D + trade", color: c.mix, dash: null },
+    { key: "best_of", name: "Daily best-of", color: c.muted, dash: "4 3" },
+  ];
+  box.replaceChildren();
+  const W = box.clientWidth, H = 320;
+  const svg = d3.select(box).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const y = d3.scaleLinear([0, d3.max(rows, (r) => r.best_of) * 1.05], [H - 24, 8]).nice();
+  const ticks = y.ticks(5);
+  const left = bx.textWidth(svg, ticks.map(bx.eur)) + 10;
+  const endW = bx.textWidth(svg, series.map((s) => s.name)) + 10;
+  const right = W < 520 ? 8 : endW;
+  const x = d3.scaleUtc([rows[0].date, rows[rows.length - 1].date], [left, W - right]);
+  const last12 = rows.slice(-12);
+  svg.append("rect").attr("x", x(last12[0].date) - 4).attr("y", 8).attr("width", x(last12[11].date) - x(last12[0].date) + 8)
+    .attr("height", H - 32).style("fill", "var(--cds-chart-grid)").style("opacity", 0.6).attr("rx", 4);
+  svg.append("g").attr("transform", `translate(${left},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(bx.eur).tickSize(-(W - left - right)))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  svg.append("g").attr("transform", `translate(0,${H - 24})`).call(d3.axisBottom(x).ticks(d3.utcYear.every(1)).tickFormat(d3.utcFormat("%Y")).tickSizeOuter(0))
+    .attr("font-size", null).attr("font-family", null);
+  for (const s of series) {
+    svg.append("path").datum(rows).attr("fill", "none").style("stroke", s.color).attr("stroke-width", s.dash ? 1.5 : 2)
+      .attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("stroke-dasharray", s.dash)
+      .attr("d", d3.line().x((r) => x(r.date)).y((r) => y(r[s.key])));
+  }
+  if (W >= 520) {
+    // End labels, nudged apart so lines that converge never print on top of each other.
+    const ends = series.map((s) => ({ s, y: y(rows[rows.length - 1][s.key]) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 14);
+    for (const e of ends) svg.append("text").attr("class", "bx-endlabel").attr("x", W - right + 6).attr("y", e.y).attr("dy", "0.35em").text(e.s.name);
+  }
+  const t = bx.tip(box);
+  const rule = svg.append("line").attr("y1", 8).attr("y2", H - 24).style("stroke", "var(--cds-chart-reference)").style("opacity", 0);
+  const fmt = d3.utcFormat("%b %Y");
+  svg.append("rect").attr("x", left).attr("y", 0).attr("width", W - left - right).attr("height", H).style("fill", "transparent")
+    .on("pointermove", (ev) => {
+      const [mx] = d3.pointer(ev);
+      const i = d3.bisectCenter(rows.map((r) => +r.date), +x.invert(mx));
+      const r = rows[i];
+      rule.attr("x1", x(r.date)).attr("x2", x(r.date)).style("opacity", 1);
+      bx.showTip(box, t, x(r.date), y(r.best_of), fmt(r.date), series.map((s) => [s.color, s.name, bx.eur(r[s.key]) + " EUR"]));
+    })
+    .on("pointerleave", () => { t.hidden = true; rule.style("opacity", 0); });
+});
+</script>
+
+<script>
+// Annualised revenue by calendar year: grouped bars.
+bx.chart(() => {
+  const box = document.getElementById("chart-yearly");
+  const d = dash.data("yearly");
+  if (bx.failOrWait(box, [d.status])) return;
+  const c = bx.colors();
+  const rows = d.data;
+  const keys = [{ key: "mixed", name: "FCR-D + one trade", color: c.mix }, { key: "fcr_d_stacked", name: "FCR-D up + down", color: c.d }, { key: "fcr_n", name: "FCR-N", color: c.n }, { key: "arbitrage", name: "Day-ahead arbitrage", color: c.arb }];
+  box.replaceChildren();
+  const W = box.clientWidth, H = 260;
+  const svg = d3.select(box).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.fcr_n, r.fcr_d_stacked, r.arbitrage, r.mixed))], [H - 24, 8]).nice();
+  const ticks = y.ticks(4);
+  const left = bx.textWidth(svg, ticks.map(bx.eur)) + 10;
+  const x = d3.scaleBand(rows.map((r) => r.year), [left, W - 4]).padding(0.25);
+  const xi = d3.scaleBand(keys.map((k) => k.key), [0, x.bandwidth()]).padding(0.12);
+  svg.append("g").attr("transform", `translate(${left},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(bx.eur).tickSize(-(W - left - 4)))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  svg.append("g").attr("transform", `translate(0,${H - 24})`).call(d3.axisBottom(x).tickFormat((yr) => rows.find((r) => r.year === yr).full_year ? yr : yr + " YTD").tickSizeOuter(0))
+    .attr("font-size", null).attr("font-family", null);
+  const t = bx.tip(box);
+  const g = svg.append("g").selectAll("g").data(rows).join("g").attr("transform", (r) => `translate(${x(r.year)},0)`);
+  g.selectAll("rect").data((r) => keys.map((k) => ({ r, k }))).join("rect")
+    .attr("x", (o) => xi(o.k.key)).attr("width", Math.min(32, xi.bandwidth()))
+    .attr("y", (o) => y(o.r[o.k.key])).attr("height", (o) => y(0) - y(o.r[o.k.key])).attr("rx", 4)
+    .style("fill", (o) => o.k.color)
+    .on("pointermove", (ev, o) => {
+      const [mx, my] = d3.pointer(ev, box);
+      bx.showTip(box, t, mx, my, o.r.full_year ? o.r.year : `${o.r.year} (Jan–Sep, annualised)`, keys.map((k) => [k.color, k.name, bx.eur(o.r[k.key]) + " EUR"]));
+    })
+    .on("pointerleave", () => { t.hidden = true; });
+});
+</script>
+
+<script>
+// Days won per month, last 12 months: stacked bars.
+bx.chart(() => {
+  const box = document.getElementById("chart-days");
+  const d = dash.data("monthly");
+  if (bx.failOrWait(box, [d.status])) return;
+  const c = bx.colors();
+  const rows = d.data.map((r) => ({ month: r.month, date: new Date(r.month + "-01T00:00:00Z"), n: +r.fcr_n_days_won, d: +r.fcr_d_days_won, a: +r.arbitrage_days_won, m: +r.mixed_days_won }))
+    .sort((a, b) => a.date - b.date).slice(-12);
+  box.replaceChildren();
+  const W = box.clientWidth, H = 260;
+  const svg = d3.select(box).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const y = d3.scaleLinear([0, 31], [H - 24, 8]);
+  const left = bx.textWidth(svg, ["30"]) + 10;
+  const x = d3.scaleBand(rows.map((r) => r.month), [left, W - 4]).padding(0.25);
+  const fmt = d3.utcFormat("%b");
+  svg.append("g").attr("transform", `translate(${left},0)`).call(d3.axisLeft(y).tickValues([0, 10, 20, 30]).tickSize(-(W - left - 4)))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  const every = W < 420 ? 3 : 1;
+  svg.append("g").attr("transform", `translate(0,${H - 24})`).call(d3.axisBottom(x).tickValues(rows.filter((_, i) => i % every === 0).map((r) => r.month))
+    .tickFormat((m) => fmt(new Date(m + "-01T00:00:00Z"))).tickSizeOuter(0)).attr("font-size", null).attr("font-family", null);
+  const bw = Math.min(32, x.bandwidth()), off = (x.bandwidth() - bw) / 2;
+  const t = bx.tip(box);
+  const g = svg.append("g").selectAll("g").data(rows).join("g").attr("transform", (r) => `translate(${x(r.month) + off},0)`);
+  // FCR-D + one trade at the bottom, then FCR-D, FCR-N, arbitrage; 2px gap between segments.
+  g.append("rect").attr("width", bw).attr("y", (r) => y(r.m)).attr("height", (r) => y(0) - y(r.m)).attr("rx", 3).style("fill", c.mix);
+  g.append("rect").attr("width", bw).attr("y", (r) => y(r.m + r.d)).attr("height", (r) => Math.max(0, y(r.m) - y(r.m + r.d) - 2)).attr("rx", 3).style("fill", c.d);
+  g.append("rect").attr("width", bw).attr("y", (r) => y(r.m + r.d + r.n)).attr("height", (r) => Math.max(0, y(r.m + r.d) - y(r.m + r.d + r.n) - 2)).attr("rx", 3).style("fill", c.n);
+  g.append("rect").attr("width", bw).attr("y", (r) => y(r.m + r.d + r.n + r.a)).attr("height", (r) => Math.max(0, y(r.m + r.d + r.n) - y(r.m + r.d + r.n + r.a) - 2)).attr("rx", 3).style("fill", c.arb);
+  g.on("pointermove", (ev, r) => {
+    const [mx, my] = d3.pointer(ev, box);
+    bx.showTip(box, t, mx, my, d3.utcFormat("%B %Y")(r.date), [[c.mix, "FCR-D + one trade", r.m + " days"], [c.d, "FCR-D up + down", r.d + " days"], [c.n, "FCR-N", r.n + " days"], [c.arb, "Day-ahead arbitrage", r.a + " days"]]);
+  }).on("pointerleave", () => { t.hidden = true; });
+});
+</script>
+
+<script>
+// Average price by hour of the CET day.
+bx.chart(() => {
+  const box = document.getElementById("chart-profile");
+  const d = dash.data("profile");
+  if (bx.failOrWait(box, [d.status])) return;
+  const c = bx.colors();
+  const rows = d.data.map((r) => ({ hour: +r.hour, fcr_n: +r.fcr_n, fcr_d_up: +r.fcr_d_up, fcr_d_down: +r.fcr_d_down })).sort((a, b) => a.hour - b.hour);
+  const series = [{ key: "fcr_n", name: "FCR-N", color: c.n }, { key: "fcr_d_up", name: "FCR-D up", color: c.d }, { key: "fcr_d_down", name: "FCR-D down", color: c.down }];
+  box.replaceChildren();
+  const W = box.clientWidth, H = 260;
+  const svg = d3.select(box).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.fcr_n, r.fcr_d_up, r.fcr_d_down)) * 1.08], [H - 24, 8]).nice();
+  const ticks = y.ticks(4);
+  const left = bx.textWidth(svg, ticks.map(String)) + 10;
+  const right = W < 520 ? 8 : bx.textWidth(svg, series.map((s) => s.name)) + 10;
+  const x = d3.scaleLinear([0, 23], [left, W - right]);
+  svg.append("g").attr("transform", `translate(${left},0)`).call(d3.axisLeft(y).tickValues(ticks).tickSize(-(W - left - right)))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  svg.append("g").attr("transform", `translate(0,${H - 24})`).call(d3.axisBottom(x).tickValues(W < 420 ? [0, 6, 12, 18] : [0, 3, 6, 9, 12, 15, 18, 21])
+    .tickFormat((h) => String(h).padStart(2, "0") + ":00").tickSizeOuter(0)).attr("font-size", null).attr("font-family", null);
+  for (const s of series) {
+    svg.append("path").datum(rows).attr("fill", "none").style("stroke", s.color).attr("stroke-width", 2)
+      .attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("d", d3.line().x((r) => x(r.hour)).y((r) => y(r[s.key])));
+  }
+  if (W >= 520) {
+    const ends = series.map((s) => ({ s, y: y(rows[rows.length - 1][s.key]) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 14);
+    for (const e of ends) svg.append("text").attr("class", "bx-endlabel").attr("x", W - right + 6).attr("y", e.y).attr("dy", "0.35em").text(e.s.name);
+  }
+  const t = bx.tip(box);
+  const rule = svg.append("line").attr("y1", 8).attr("y2", H - 24).style("stroke", "var(--cds-chart-reference)").style("opacity", 0);
+  svg.append("rect").attr("x", left).attr("width", W - left - right).attr("height", H).style("fill", "transparent")
+    .on("pointermove", (ev) => {
+      const [mx] = d3.pointer(ev);
+      const r = rows[Math.max(0, Math.min(23, Math.round(x.invert(mx))))];
+      rule.attr("x1", x(r.hour)).attr("x2", x(r.hour)).style("opacity", 1);
+      bx.showTip(box, t, x(r.hour), y(r.fcr_n), String(r.hour).padStart(2, "0") + ":00 CET", series.map((s) => [s.color, s.name, r[s.key].toFixed(2) + " EUR/MW/h"]));
+    })
+    .on("pointerleave", () => { t.hidden = true; rule.style("opacity", 0); });
+});
+</script>
+
+<script>
+// Price spread per product: middle half as a bar, median as a dot, a line out to the 95th percentile.
+bx.chart(() => {
+  const box = document.getElementById("chart-spread");
+  const d = dash.data("prices");
+  if (bx.failOrWait(box, [d.status])) return;
+  const c = bx.colors();
+  const names = { fcr_n: "FCR-N", fcr_d_up: "FCR-D up", fcr_d_down: "FCR-D down" };
+  const col = { fcr_n: c.n, fcr_d_up: c.d, fcr_d_down: c.down };
+  const rows = d.data.map((r) => ({ product: r.product, p25: +r.p25, median: +r.median, p75: +r.p75, p95: +r.p95, max: +r.max, mean: +r.mean }));
+  box.replaceChildren();
+  const W = box.clientWidth, H = 260;
+  const svg = d3.select(box).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const left = bx.textWidth(svg, Object.values(names)) + 14;
+  const x = d3.scaleLinear([0, d3.max(rows, (r) => r.p95) * 1.08], [left, W - 12]).nice();
+  const y = d3.scaleBand(rows.map((r) => r.product), [8, H - 28]).padding(0.45);
+  svg.append("g").attr("transform", `translate(0,${H - 28})`).call(d3.axisBottom(x).ticks(W < 420 ? 4 : 6).tickSize(-(H - 36)).tickSizeOuter(0))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  svg.append("g").attr("transform", `translate(${left},0)`).call(d3.axisLeft(y).tickFormat((p) => names[p]).tickSize(0))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  const t = bx.tip(box);
+  const g = svg.append("g").selectAll("g").data(rows).join("g").attr("transform", (r) => `translate(0,${y(r.product)})`);
+  const bh = Math.min(24, y.bandwidth());
+  g.append("line").attr("x1", (r) => x(r.p75)).attr("x2", (r) => x(r.p95)).attr("y1", bh / 2).attr("y2", bh / 2).style("stroke", (r) => col[r.product]).attr("stroke-width", 2).attr("stroke-linecap", "round");
+  g.append("rect").attr("x", (r) => x(r.p25)).attr("width", (r) => x(r.p75) - x(r.p25)).attr("height", bh).attr("rx", 4).style("fill", (r) => col[r.product]).style("opacity", 0.35);
+  g.append("circle").attr("cx", (r) => x(r.median)).attr("cy", bh / 2).attr("r", 5).style("fill", (r) => col[r.product]).style("stroke", "var(--color-panel)").attr("stroke-width", 2);
+  g.on("pointermove", (ev, r) => {
+    const [mx, my] = d3.pointer(ev, box);
+    bx.showTip(box, t, mx, my, names[r.product] + ", EUR/MW/h", [[null, "Median", r.median.toFixed(2)], [null, "Middle half", `${r.p25.toFixed(2)}–${r.p75.toFixed(2)}`], [null, "95th percentile", r.p95.toFixed(2)], [null, "Highest hour", r.max.toFixed(2)]]);
+  }).on("pointerleave", () => { t.hidden = true; });
+});
+</script>
+
+<script>
+// Quarterly revenue: grouped bars, one group per quarter. The heading states the finding.
+bx.chart(() => {
+  const box = document.getElementById("chart-quarterly");
+  const head = document.getElementById("quarterly");
+  const d = dash.data("quarterly");
+  if (bx.failOrWait(box, [d.status])) return;
+  const c = bx.colors();
+  const rows = d.data;
+  const keys = [
+    { key: "mixed", name: "FCR-D + one trade", color: c.mix },
+    { key: "fcr_d_stacked", name: "FCR-D up + down", color: c.d },
+    { key: "fcr_n", name: "FCR-N", color: c.n },
+    { key: "arbitrage", name: "Day-ahead arbitrage", color: c.arb },
+  ];
+  const label = (q) => q.slice(4) + " " + q.slice(0, 4);
+  const led = rows.find((r) => r.fcr_n > r.fcr_d_stacked);
+  const last = rows[rows.length - 1];
+  head.textContent = !led
+    ? "Revenue by quarter"
+    : led === last
+      ? `In ${label(led.quarter)}, FCR-N out-earned FCR-D for the first time`
+      : `FCR-N first out-earned FCR-D in ${label(led.quarter)}`;
+
+  box.replaceChildren();
+  const W = box.clientWidth, H = 320;
+  const svg = d3.select(box).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.fcr_d_stacked, r.fcr_n, r.arbitrage, r.mixed))], [H - 40, 8]).nice();
+  const ticks = y.ticks(5);
+  const left = bx.textWidth(svg, ticks.map(bx.eur)) + 10;
+  const x = d3.scaleBand(rows.map((r) => r.quarter), [left, W - 4]).padding(0.2);
+  const xi = d3.scaleBand(keys.map((k) => k.key), [0, x.bandwidth()]).padding(0.1);
+  svg.append("g").attr("transform", `translate(${left},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(bx.eur).tickSize(-(W - left - 4)))
+    .attr("font-size", null).attr("font-family", null).call((g) => g.select(".domain").remove());
+  // Year under each Q1 (and the first quarter); on narrow screens only the years.
+  const narrow = W < 560;
+  const axis = svg.append("g").attr("transform", `translate(0,${H - 40})`)
+    .call(d3.axisBottom(x).tickSizeOuter(0).tickFormat((q) => (narrow ? "" : q.slice(4))))
+    .attr("font-size", null).attr("font-family", null);
+  axis.selectAll(".tick").filter((q, i) => q.endsWith("Q1") || i === 0).append("text")
+    .attr("y", narrow ? 9 : 22).attr("dy", "0.71em").attr("text-anchor", "middle").style("fill", "var(--color-fg-muted)")
+    .text((q) => q.slice(0, 4));
+  const t = bx.tip(box);
+  const g = svg.append("g").selectAll("g").data(rows).join("g").attr("transform", (r) => `translate(${x(r.quarter)},0)`);
+  g.selectAll("rect").data((r) => keys.map((k) => ({ r, k }))).join("rect")
+    .attr("x", (o) => xi(o.k.key)).attr("width", Math.min(24, xi.bandwidth()))
+    .attr("y", (o) => y(o.r[o.k.key])).attr("height", (o) => y(0) - y(o.r[o.k.key])).attr("rx", 3)
+    .style("fill", (o) => o.k.color);
+  // A partial quarter (fewer than 90 days) gets a muted note under its bars.
+  g.filter((r) => r.days < 90).append("text").attr("x", x.bandwidth() / 2).attr("y", y(0) - 4)
+    .attr("text-anchor", "middle").attr("class", "bx-endlabel").text("partial");
+  // Hover anywhere in a quarter's column.
+  g.append("rect").attr("width", x.bandwidth()).attr("y", 0).attr("height", H - 40).style("fill", "transparent")
+    .on("pointermove", (ev, r) => {
+      const [mx, my] = d3.pointer(ev, box);
+      const when = label(r.quarter) + (r.days < 90 ? ` (partial, ${r.days} days)` : "");
+      bx.showTip(box, t, mx, my, when, [
+        ...keys.map((k) => [k.color, k.name, bx.eur(r[k.key]) + " EUR"]),
+        [null, "Daily best-of", bx.eur(r.best_of) + " EUR"],
+      ]);
+    })
+    .on("pointerleave", () => { t.hidden = true; });
+});
+</script>
+
+<script>
+// Animated day of schedule B. The reserves and trade size come from the assumptions data; the
+// charge (03:00) and sell (18:00) hours and the 11:00 activation are illustrative examples.
+(() => {
+  const FCR_D_ENERGY_H = 20 / 60; // Table 10: 20 minutes of full activation kept each way per MW
+  const CHARGE_H = 3, SELL_H = 18, TRIP_H = 11;
+  const X0 = 40, X1 = 520, Y_TOP = 110, Y_BOT = 220, H_SPAN = Y_BOT - Y_TOP;
+  const $ = (id) => document.getElementById(id);
+  const slider = $("mo-hour"), play = $("mo-play"), clock = $("mo-clock"), status = $("mo-status");
+  let model = null, hour = 0, raf = 0, last = 0;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const hhmm = (h) => {
+    const m = Math.round(h * 60) % (24 * 60) + (h >= 24 ? 24 * 60 : 0);
+    return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+  };
+  const fmt = (v) => (Math.round(v * 1000) / 1000).toString();
+
+  // Charge level (MWh) at hour h: low between trades, high between charging and selling.
+  const soc = (h) => {
+    const { lo, hi, dip } = model;
+    if (h < CHARGE_H) return lo;
+    if (h < CHARGE_H + 1) return lo + (hi - lo) * (h - CHARGE_H);
+    if (h < TRIP_H) return hi;
+    if (h < TRIP_H + 0.25) return hi - dip * ((h - TRIP_H) / 0.25);
+    if (h < TRIP_H + 1) return hi - dip * (1 - (h - TRIP_H - 0.25) / 0.75);
+    if (h < SELL_H) return hi;
+    if (h < SELL_H + 1) return hi - (hi - lo) * (h - SELL_H);
+    return lo;
+  };
+  const msg = (h) => {
+    const { trade, sell } = model;
+    if (h < CHARGE_H) return "FCR-D: standing ready in both directions. The charge sits just above the energy kept for FCR-D up.";
+    if (h < CHARGE_H + 1) return `Out of FCR-D for this hour: buying ${fmt(trade)} MWh in the day's cheapest hour.`;
+    if (h < TRIP_H) return "Back in FCR-D. The battery is fuller now, but both reserves are still intact, so it can offer FCR-D again.";
+    if (h < TRIP_H + 0.25) return "A power plant trips: frequency falls below 49.9 Hz and FCR-D up discharges for a few minutes. Paid capacity doing its job.";
+    if (h < TRIP_H + 1) return "Frequency is back. A small intraday purchase tops the charge back up, so the reserves stay intact.";
+    if (h < SELL_H) return "FCR-D again, all afternoon. The stored energy waits for the evening price peak.";
+    if (h < SELL_H + 1) return `Out of FCR-D for this hour: selling ${fmt(sell)} MWh (88% of what was bought) in the day's dearest hour.`;
+    return "Back in FCR-D, at the same charge level as the morning: ready to repeat tomorrow.";
+  };
+  const x = (h) => X0 + (h / 24) * (X1 - X0);
+  const y = (mwh) => Y_BOT - (mwh / model.E) * H_SPAN;
+
+  const path = (to) => {
+    let d = "";
+    for (let h = 0; h <= to + 1e-9; h += 0.05) d += (d ? "L" : "M") + x(h).toFixed(1) + "," + y(soc(h)).toFixed(1);
+    return d;
+  };
+
+  const render = () => {
+    if (!model) return;
+    const yy = y(soc(hour));
+    $("mo-head").setAttribute("x1", x(hour)); $("mo-head").setAttribute("x2", x(hour));
+    $("mo-dot").setAttribute("cx", x(hour)); $("mo-dot").setAttribute("cy", yy);
+    $("mo-path-done").setAttribute("d", path(hour));
+    $("mo-fill").setAttribute("y", Math.min(yy, Y_BOT - 2));
+    $("mo-fill").setAttribute("height", Math.max(2, Y_BOT - 2 - yy));
+    slider.value = hour;
+    const t = hhmm(hour);
+    clock.textContent = t;
+    slider.setAttribute("aria-valuetext", t);
+    status.textContent = t + " · " + msg(Math.min(hour, 23.999));
+  };
+
+  const setup = () => {
+    const a = dash.data("assumptions");
+    if (a.status !== "ok") return;
+    const val = (k) => Number((a.data.find((r) => r.key === k) || {}).value);
+    const E = val("energy_mwh"), bid = val("bid_fcr_d_mw"), trade = val("mixed_trade_mwh");
+    const r = bid * FCR_D_ENERGY_H;
+    model = { E, lo: r, hi: E - r, trade, sell: trade * val("round_trip_efficiency"), dip: r * 0.35 };
+    // Reserve bands, on the chart and in the tank, at the battery's own scale.
+    const band = (r / E) * H_SPAN;
+    $("mo-band-top").setAttribute("height", band);
+    $("mo-band-bot").setAttribute("y", Y_BOT - band); $("mo-band-bot").setAttribute("height", band);
+    $("mo-tank-top").setAttribute("height", band - 1);
+    $("mo-tank-bot").setAttribute("y", Y_BOT - band); $("mo-tank-bot").setAttribute("height", band - 1);
+    $("mo-path").setAttribute("d", path(24));
+    render();
+  };
+
+  const stop = () => { cancelAnimationFrame(raf); raf = 0; play.textContent = hour >= 24 ? "Replay" : "Play"; };
+  const step = (now) => {
+    // 24 hours in about 16 seconds; with reduced motion, jump an hour at a time instead.
+    if (reduced) { if (now - last < 700) { raf = requestAnimationFrame(step); return; } hour = Math.min(24, Math.floor(hour) + 1); }
+    else hour = Math.min(24, hour + ((now - (last || now)) / 1000) * 1.5);
+    last = now;
+    render();
+    if (hour >= 24) stop(); else raf = requestAnimationFrame(step);
+  };
+  play.addEventListener("click", () => {
+    if (raf) { stop(); return; }
+    if (hour >= 24) hour = 0;
+    last = 0;
+    play.textContent = "Pause";
+    raf = requestAnimationFrame(step);
+  });
+  slider.addEventListener("input", () => { stop(); hour = Number(slider.value); render(); });
+  dash.onData(setup);
+})();
+</script>
+
+<script>
+// Tug-of-war frequency explainer. Purely illustrative: no data, a fixed mapping from the
+// made-minus-used gap (-1..1) to frequency (49.5..50.5 Hz) so each FCR band is reachable.
+(() => {
+  const slider = document.getElementById("fq-gap");
+  const status = document.getElementById("fq-status");
+  if (!slider) return;
+  const $ = (id) => document.getElementById(id);
+  const X_MID = 350, PX_PER_HZ = 580; // ruler: 49.5 Hz at x=60, 50.5 Hz at x=640
+  const say = (gap, hz) => {
+    if (hz <= 49.5) return "Huge shortfall: frequency is at the bottom of the FCR-D range. Every FCR-D up battery is discharging at full power, holding the line until slower reserves arrive.";
+    if (hz < 49.9) return "Something big was lost on the supply side, like a power plant or an import line. Far more is used than made, so the shared rhythm slows sharply. FCR-D up batteries discharge within seconds, adding power.";
+    if (hz < 49.98) return "A little more is used than made, as when demand climbs in the evening faster than plants ramp up. Frequency dips slightly, and FCR-N batteries discharge a little to add power.";
+    if (hz <= 50.02) return "Made and used are almost equal. Frequency wobbles a little around 50 Hz and FCR-N makes small pushes both ways.";
+    if (hz <= 50.1) return "A little more is made than used, as when wind blows harder than forecast. Frequency creeps up, and FCR-N batteries charge a little to soak up the extra power.";
+    if (hz < 50.5) return "Something big was lost on the demand side, like a large factory or an export line. Far more is made than used, so the rhythm speeds up. FCR-D down batteries charge within seconds, absorbing power.";
+    return "Huge surplus: frequency is at the top of the FCR-D range. Every FCR-D down battery is charging at full power until slower reserves cut generation.";
+  };
+  const render = () => {
+    const gap = Number(slider.value);
+    const hz = 50 + gap * 0.5;
+    const x = X_MID + (hz - 50) * PX_PER_HZ;
+    $("fq-needle").setAttribute("transform", `translate(${(x - X_MID).toFixed(1)},0)`);
+    $("fq-hz").setAttribute("x", x.toFixed(1));
+    $("fq-hz").textContent = hz.toFixed(2) + " Hz";
+    // The rope's knot moves towards the stronger side; the stronger team's bar grows.
+    $("fq-knot").setAttribute("cx", (X_MID + gap * 200).toFixed(1));
+    $("fq-pull").setAttribute("width", (100 - gap * 40).toFixed(1));
+    $("fq-push").setAttribute("width", (100 + gap * 40).toFixed(1));
+    $("fq-push").setAttribute("x", (680 - (100 + gap * 40)).toFixed(1));
+    slider.setAttribute("aria-valuetext", hz.toFixed(2) + " hertz");
+    status.textContent = say(gap, hz);
+    for (const b of document.querySelectorAll(".fq-btn")) b.setAttribute("aria-pressed", String(Number(b.dataset.gap) === gap));
+  };
+  slider.addEventListener("input", render);
+  for (const b of document.querySelectorAll(".fq-btn")) {
+    b.addEventListener("click", () => { slider.value = b.dataset.gap; render(); });
+  }
+  render();
+})();
+</script>
+
+<script>
+// Tabs and in-page links. Each tab and section has an id, so a link can open it directly.
+(() => {
+  const tabs = [...document.querySelectorAll(".bx-tab")];
+  const show = (name) => {
+    for (const t of tabs) {
+      const on = t.dataset.tab === name;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.dataset.tab).hidden = !on;
+    }
+    if (name === "results") bx.redraw();
+  };
+  const go = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const panel = el.closest('[role="tabpanel"]');
+    if (panel) show(panel.id);
+    if (el.getAttribute("role") !== "tabpanel") el.scrollIntoView({ block: "start" });
+    dash.setLink(id);
+  };
+  for (const t of tabs) {
+    t.addEventListener("click", () => { show(t.dataset.tab); dash.setLink(t.dataset.tab); });
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const next = tabs[(tabs.indexOf(t) + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      next.click();
+    });
+  }
+  document.querySelector(".bx").addEventListener("click", (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+    go(a.getAttribute("href").slice(1));
+  });
+  const first = location.hash.slice(1);
+  if (first && document.getElementById(first)) go(first);
+})();
+</script>
+
+<p class="sa-foot">Code, data pipeline and tests:
+<a href="https://github.com/Tarun1297/nordic-bess-revenue">github.com/Tarun1297/nordic-bess-revenue</a>.
+Data: Fingrid open data and the ENTSO-E Transparency Platform.</p>
+</div>
+</body>
+</html>
