@@ -414,7 +414,12 @@ def chart_quarterly(
         title = f"Quarterly revenue by strategy, {span}"
     fig, ax = plt.subplots(figsize=(10, 5.5))
     fig.subplots_adjust(left=0.08, right=0.97, top=0.82, bottom=0.17)
-    _style(ax, title, "Revenue per quarter, EUR per MW, by strategy, market time (CET)")
+    _style(
+        ax,
+        title,
+        f"Revenue per quarter, EUR per MW, {params.power_mw:g} MW / {params.energy_mwh:g} MWh "
+        "battery, by strategy, market time (CET)",
+    )
     width = 0.8 / len(bars)
     for i, s in enumerate(bars):
         x = [j + (i - (len(bars) - 1) / 2) * width for j in range(len(q))]

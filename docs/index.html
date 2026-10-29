@@ -224,43 +224,44 @@ window.dash = (() => {
   <div class="bx-tabs" role="tablist" aria-label="Dashboard pages">
     <button class="bx-tab" role="tab" id="tab-results" data-tab="results" aria-selected="true" aria-controls="results">Results</button>
     <button class="bx-tab" role="tab" id="tab-how" data-tab="how" aria-selected="false" aria-controls="how" tabindex="-1">How it works</button>
+    <button class="bx-tab" role="tab" id="tab-conclusions" data-tab="conclusions" aria-selected="false" aria-controls="conclusions" tabindex="-1">Conclusions</button>
   </div>
 
   <section id="results" class="bx-panel" role="tabpanel" aria-labelledby="tab-results">
 
   <section class="bx-kpis" aria-label="Last 12 months">
     <div class="bx-kpi">
-      <span class="bx-label">FCR-D + one trade, last 12 months</span>
+      <span class="bx-label">FCR-D + one trade, last 12 months, 1-hour battery</span>
       <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=mixed">—</span>
       <span class="bx-unit">EUR per MW · FCR-D except two hours; trades <span data-source="assumptions" data-field="value" data-where="key=mixed_trade_mwh">—</span> MWh a day</span>
       <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=mixed">—</span> vs prior 12 months</span>
     </div>
     <div class="bx-kpi">
-      <span class="bx-label">FCR-D up + down, last 12 months</span>
+      <span class="bx-label">FCR-D up + down, last 12 months, 1-hour battery</span>
       <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=fcr_d_stacked">—</span>
       <span class="bx-unit">EUR per MW · bid <span data-source="assumptions" data-field="value" data-where="key=bid_fcr_d_mw">—</span> MW each way</span>
       <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=fcr_d_stacked">—</span> vs prior 12 months</span>
     </div>
     <div class="bx-kpi">
-      <span class="bx-label">FCR-N, last 12 months</span>
+      <span class="bx-label">FCR-N, last 12 months, 1-hour battery</span>
       <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=fcr_n">—</span>
       <span class="bx-unit">EUR per MW · bid <span data-source="assumptions" data-field="value" data-where="key=bid_fcr_n_mw">—</span> MW</span>
       <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=fcr_n">—</span> vs prior 12 months</span>
     </div>
     <div class="bx-kpi">
-      <span class="bx-label">Day-ahead arbitrage, last 12 months</span>
+      <span class="bx-label">Day-ahead arbitrage, last 12 months, 1-hour battery</span>
       <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=arbitrage">—</span>
       <span class="bx-unit">EUR per MW · buy <span data-source="assumptions" data-field="value" data-where="key=arb_buy_mwh">—</span> MWh, sell <span data-source="assumptions" data-field="value" data-where="key=arb_sell_mwh">—</span> MWh a day</span>
       <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=arbitrage">—</span> vs prior 12 months</span>
     </div>
     <div class="bx-kpi">
-      <span class="bx-label">Daily best-of, last 12 months</span>
+      <span class="bx-label">Daily best-of, last 12 months, 1-hour battery</span>
       <span class="bx-big" data-source="headline" data-field="last12" data-where="strategy=best_of">—</span>
       <span class="bx-unit">EUR per MW · best modelled strategy each day, perfect foresight</span>
       <span class="bx-delta"><span data-source="headline" data-field="change_pct" data-where="strategy=best_of">—</span> vs prior 12 months</span>
     </div>
     <div class="bx-kpi">
-      <span class="bx-label">Best-of vs peak year</span>
+      <span class="bx-label">Best-of vs peak year, 1-hour battery</span>
       <span class="bx-big" data-source="vs_peak" data-field="change_pct" data-row="0">—</span>
       <span class="bx-unit">peak year <span data-source="vs_peak" data-field="peak_year" data-row="0">—</span>:
         <span data-source="vs_peak" data-field="peak" data-row="0">—</span> EUR per MW</span>
@@ -270,7 +271,7 @@ window.dash = (() => {
 
   <section class="bx-card" id="monthly-card">
     <h2 id="monthly">Revenue peaked in 2023 and has fallen since</h2>
-    <p class="bx-note">Monthly revenue in EUR per MW, January 2022 to September 2026, market time (CET). Shaded: last 12 months.</p>
+    <p class="bx-note">Monthly revenue in EUR per MW for a 1 MW / 1 MWh (1-hour) battery, January 2022 to September 2026, market time (CET). Shaded: last 12 months.</p>
     <div class="bx-legend">
       <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
       <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
@@ -283,7 +284,7 @@ window.dash = (() => {
 
   <section class="bx-card" id="quarterly-card">
     <h2 id="quarterly">Revenue by quarter</h2>
-    <p class="bx-note">Revenue per quarter in EUR per MW, by strategy, market time (CET). A quarter with fewer than 90 days of data is marked partial.</p>
+    <p class="bx-note">Revenue per quarter in EUR per MW for a 1-hour battery, by strategy, market time (CET). A quarter with fewer than 90 days of data is marked partial.</p>
     <div class="bx-legend">
       <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
       <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
@@ -302,13 +303,13 @@ window.dash = (() => {
         <tbody id="durations-body"></tbody>
       </table>
     </div>
-    <p class="bx-note">FCR-D is capped by power, so it does not grow with duration; FCR-N grows once, to 2 hours. Trading grows with every hour of storage. The one-trade strategy trades at most one hour at full power, and arbitrage makes one cycle a day, so the 4-hour trading figures are a floor.</p>
+    <p class="bx-note">FCR-D is capped by power, so it does not grow with duration; FCR-N grows until about 1.5 hours, where its power rule takes over. Trading grows with every hour of storage. The one-trade strategy trades at most one hour at full power, and arbitrage makes one cycle a day, so the 4-hour trading figures are a floor.</p>
   </section>
 
   <div class="bx-grid">
     <section class="bx-card">
       <h2 id="yearly">Reserve revenue has fallen every year since 2023; trading has held steady</h2>
-      <p class="bx-note">Annualised EUR per MW per calendar year. 2026 runs January to September only.</p>
+      <p class="bx-note">Annualised EUR per MW per calendar year, 1-hour battery. 2026 runs January to September only.</p>
       <div class="bx-legend">
         <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
         <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
@@ -319,7 +320,7 @@ window.dash = (() => {
     </section>
     <section class="bx-card">
       <h2 id="days">FCR-N wins more days as FCR-D prices fall</h2>
-      <p class="bx-note">Days per month on which each strategy paid most, last 12 months.</p>
+      <p class="bx-note">Days per month on which each strategy paid most, last 12 months, 1-hour battery. A longer battery can bid more FCR-N, so its winners differ.</p>
       <div class="bx-legend">
         <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up + down</span>
         <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
@@ -333,7 +334,7 @@ window.dash = (() => {
   <div class="bx-grid">
     <section class="bx-card">
       <h2 id="profile">FCR-D up is an evening product</h2>
-      <p class="bx-note">Average price by hour of day, last 12 months, EUR per MW per hour (CET).</p>
+      <p class="bx-note">Average price by hour of day, last 12 months, EUR per MW per hour (CET). Market prices: the same for any battery size.</p>
       <div class="bx-legend">
         <span><i class="bx-sw" style="background: var(--bx-c0)"></i>FCR-N</span>
         <span><i class="bx-sw" style="background: var(--bx-c1)"></i>FCR-D up</span>
@@ -343,7 +344,7 @@ window.dash = (() => {
     </section>
     <section class="bx-card">
       <h2 id="spread">Per MW, FCR-N pays most, but a 1-hour battery can bid less of it</h2>
-      <p class="bx-note">Hourly prices, last 12 months, EUR per MW per hour. Bar: middle half of hours; dot: median; line to the 95th percentile.</p>
+      <p class="bx-note">Hourly prices, last 12 months, EUR per MW per hour; the same for any battery size. The title's 1-hour limit is the bid, not the price. Bar: middle half of hours; dot: median; line to the 95th percentile.</p>
       <div class="bx-chart" id="chart-spread" data-source="prices"></div>
     </section>
   </div>
@@ -933,6 +934,46 @@ window.dash = (() => {
         </div>
       </section>
 
+    </div>
+  </section>
+
+  <section id="conclusions" role="tabpanel" aria-labelledby="tab-conclusions" hidden>
+    <div class="hw">
+      <section class="hw-sec" id="conc-intro">
+        <h2>What this means for new Nordic projects</h2>
+        <p class="hw-lead">My reading of the results. Each point gives the evidence first, then what I take from it.</p>
+        <p>The data is Finland's; Sweden, Norway and Denmark share the same FCR rules but have their own prices.</p>
+      </section>
+
+      <section class="hw-sec" id="conc-fcr">
+        <h2>1. Don't build the business case on FCR</h2>
+        <div class="hw-results">
+          <div class="hw-result"><span class="hw-num" data-source="findings" data-field="fcrd_peak" data-row="0">—</span><span class="hw-cap">EUR per MW from FCR-D in <span data-source="findings" data-field="fcrd_peak_q" data-row="0">—</span>, its best quarter</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="findings" data-field="fcrd_last" data-row="0">—</span><span class="hw-cap">EUR per MW from FCR-D in <span data-source="findings" data-field="fcrd_last_q" data-row="0">—</span></span></div>
+          <div class="hw-result"><span class="hw-num" data-source="findings" data-field="fcrd_drop" data-row="0">—</span><span class="hw-cap">FCR-D, last 3 months against the first 3 of the last 12</span></div>
+        </div>
+        <p>Reserve income in Finland has fallen fast and has not clearly stopped falling. A project that needs FCR prices to recover is betting against a market that more batteries keep joining.</p>
+      </section>
+
+      <section class="hw-sec" id="conc-combine">
+        <h2>2. The value is in combining products and switching between them</h2>
+        <p>FCR-D with one daily trade was the best strategy on <b data-source="findings" data-field="mixed_days" data-row="0">—</b> of <b data-source="findings" data-field="days" data-row="0">—</b> days, and in <b data-source="findings" data-field="fcrn_led_q" data-row="0">—</b> FCR-N overtook FCR-D for the first time. Which product pays best now changes from quarter to quarter. An operator that mixes products within a day, and moves between them as prices shift, earns more than one that commits to a single product: the optimiser matters as much as the battery.</p>
+      </section>
+
+      <section class="hw-sec" id="conc-duration">
+        <h2>3. Choose the battery's duration for trading, not for reserves</h2>
+        <div class="hw-results">
+          <div class="hw-result"><span class="hw-num" data-source="findings" data-field="best_1h" data-row="0">—</span><span class="hw-cap">EUR per MW, daily best-of, 1-hour battery</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="findings" data-field="best_4h" data-row="0">—</span><span class="hw-cap">EUR per MW, daily best-of, 4-hour battery</span></div>
+          <div class="hw-result"><span class="hw-num" data-source="findings" data-field="mwh_4h" data-row="0">—</span><span class="hw-cap">EUR per MWh of storage at 4 hours, against <b data-source="findings" data-field="mwh_1h" data-row="0">—</b> at 1 hour</span></div>
+        </div>
+        <p>None of the gain comes from FCR-D, which is capped by power and stays at <b data-source="findings" data-field="fcrd_1h" data-row="0">—</b>. FCR-N rises until about 1.5 hours of storage, where the power rule takes over, and stays at <b data-source="findings" data-field="fcrn_2h" data-row="0">—</b> from 2 hours on; arbitrage grows with every hour. Per MWh of storage the best-of falls from <b data-source="findings" data-field="mwh_1h" data-row="0">—</b> at 1 hour to <b data-source="findings" data-field="mwh_2h" data-row="0">—</b> at 2 hours and <b data-source="findings" data-field="mwh_4h" data-row="0">—</b> at 4 hours. On these numbers a 2-hour battery is the balanced choice: it gets the largest FCR-N bid the rules allow and far more trading, while losing less per MWh than a 4-hour one. Whether 4 hours pays depends on battery cost per MWh and on trading more than once a day, and this model covers neither. <a class="hw-tablink" href="#durations">See the duration table</a>.</p>
+      </section>
+
+      <section class="hw-sec" id="conc-open">
+        <h2>4. The open questions are the rules and the markets not modelled here</h2>
+        <p>Fingrid's Table 10 halves a 1-hour battery's FCR-N bid: <b data-source="findings" data-field="fcrn_actual" data-row="0">—</b> EUR per MW against <b data-source="findings" data-field="fcrn_nameplate" data-row="0">—</b> if the full 1 MW could be bid. The Nordic FCR Technical Requirements note that the FCR-N energy requirement is reviewed and may move to 1–1.5 hours, which would change which battery sizes pay. The next step for this benchmark is aFRR, mFRR and intraday trading. I have not modelled them, so I make no claim about their size.</p>
+      </section>
     </div>
   </section>
 </div>
@@ -1559,6 +1600,47 @@ bx.chart(() => {
   }
   render();
 })();
+</script>
+
+<script>
+// Conclusions: every number on the tab is worked out here from the attached files.
+dash.calc("findings", {
+  inputs: ["monthly", "quarterly", "durations", "assumptions"],
+  title: "Numbers behind the conclusions",
+  description: "FCR-D's best and latest quarter, its fall over the last 12 months, days won by FCR-D plus one trade, the first quarter FCR-N led, revenue by battery duration and the FCR-N bid-rule effect.",
+  fn: (monthly, quarterly, durations, assumptions) => {
+    const ql = (q) => q.slice(4) + " " + q.slice(0, 4);
+    const peak = quarterly.reduce((a, b) => (b.fcr_d_stacked > a.fcr_d_stacked ? b : a));
+    const last = quarterly[quarterly.length - 1];
+    const led = quarterly.find((q) => q.fcr_n > q.fcr_d_stacked);
+    const months = [...monthly].sort((a, b) => (a.month < b.month ? -1 : 1)).slice(-12);
+    const sum = (rs, k) => rs.reduce((t, r) => t + +r[k], 0);
+    const drop = (sum(months.slice(-3), "fcr_d_stacked") / sum(months.slice(0, 3), "fcr_d_stacked") - 1) * 100;
+    const dur = (h) => durations.find((r) => +r.duration_h === h);
+    const a = (k) => +assumptions.find((r) => r.key === k).value;
+    return [{
+      fcrd_peak: peak.fcr_d_stacked, fcrd_peak_q: ql(peak.quarter),
+      fcrd_last: last.fcr_d_stacked, fcrd_last_q: ql(last.quarter),
+      fcrd_drop: Math.round(drop * 10) / 10,
+      mixed_days: sum(months, "mixed_days_won"), days: sum(months, "days"),
+      fcrn_led_q: led ? ql(led.quarter) : "no quarter",
+      best_1h: +dur(1).best_of, best_4h: +dur(4).best_of,
+      mwh_1h: +dur(1).best_of, mwh_2h: Math.round(+dur(2).best_of / 2), mwh_4h: Math.round(+dur(4).best_of / 4),
+      fcrd_1h: +dur(1).fcr_d_stacked, fcrn_2h: +dur(2).fcr_n,
+      fcrn_actual: a("actual_fcr_n"), fcrn_nameplate: a("nameplate_fcr_n"),
+    }];
+  },
+});
+
+dash.onData(() => {
+  const d = dash.data("findings");
+  for (const el of document.querySelectorAll('[data-source="findings"]')) {
+    if (d.status !== "ok" || !d.data[0]) { el.textContent = "—"; continue; }
+    const v = d.data[0][el.dataset.field];
+    if (el.dataset.field === "fcrd_drop") el.textContent = `${v < 0 ? "−" : "+"}${Math.abs(v)}%`;
+    else el.textContent = typeof v === "number" && v >= 1000 ? bx.eur(v) : String(v);
+  }
+});
 </script>
 
 <script>
