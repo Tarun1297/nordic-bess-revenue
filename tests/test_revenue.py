@@ -133,8 +133,10 @@ def test_best_of_picks_daily_maximum() -> None:
 
 def test_trade_room_keeps_fcr_d_energy_reserve() -> None:
     # 1 MWh battery, 0.833 MW FCR-D: 20 min x 0.833 MW = 0.278 MWh kept each way -> 0.444 left.
-    assert revenue.trade_room_mwh(1.0, 1 / 1.2) == pytest.approx(1 - 2 * (1 / 1.2) / 3)
-    assert revenue.trade_room_mwh(0.5, 1.0) == 0.0  # never negative
+    assert revenue.trade_room_mwh(1.0, 1.0, 1 / 1.2) == pytest.approx(1 - 2 * (1 / 1.2) / 3)
+    assert revenue.trade_room_mwh(0.5, 1.0, 1.0) == 0.0  # never negative
+    # 2 MWh leaves 1.444 MWh of room, but one hour at 1 MW can only move 1 MWh.
+    assert revenue.trade_room_mwh(2.0, 1.0, 1 / 1.2) == 1.0
 
 
 def test_fcr_d_plus_trade_swaps_two_hours_when_it_pays() -> None:

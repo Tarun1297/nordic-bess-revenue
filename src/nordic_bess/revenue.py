@@ -95,14 +95,15 @@ def arbitrage(
     return result
 
 
-def trade_room_mwh(energy_mwh: float, fcr_d_bid_mw: float) -> float:
+def trade_room_mwh(energy_mwh: float, power_mw: float, fcr_d_bid_mw: float) -> float:
     """Energy a battery can trade while keeping its FCR-D energy reserve in both directions.
 
     Table 10 reserves FCR_D_ENERGY_H of full activation per MW of FCR-D in each direction, so
     a battery offering FCR-D up and down must always hold that much energy and that much room.
-    What is left between the two reserves can be traded without ever breaking FCR-D.
+    What is left between the two reserves can be traded without ever breaking FCR-D. The trade
+    happens in one hour, so it can also never exceed one hour at full power.
     """
-    return max(0.0, energy_mwh - 2 * fcr_d_bid_mw * config.FCR_D_ENERGY_H)
+    return max(0.0, min(power_mw * 1.0, energy_mwh - 2 * fcr_d_bid_mw * config.FCR_D_ENERGY_H))
 
 
 def fcr_d_plus_trade(

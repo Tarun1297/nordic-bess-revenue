@@ -30,6 +30,8 @@ class Params:
     energy_mwh: float
     round_trip_efficiency: float
     availability: float
+    # Battery durations (hours of energy per MW) also run for the headline period.
+    durations_h: tuple[float, ...] = ()
 
 
 def load_params(path: Path = PARAMS_FILE) -> Params:
@@ -40,6 +42,7 @@ def load_params(path: Path = PARAMS_FILE) -> Params:
     expected = {
         "period": {"start", "end", "trend_start"},
         "battery": {"power_mw", "energy_mwh", "round_trip_efficiency", "availability"},
+        "sensitivity": {"durations_h"},
     }
     for section, keys in expected.items():
         got = set(raw.get(section, {}))
@@ -59,6 +62,7 @@ def load_params(path: Path = PARAMS_FILE) -> Params:
         energy_mwh=float(battery["energy_mwh"]),
         round_trip_efficiency=float(battery["round_trip_efficiency"]),
         availability=float(battery["availability"]),
+        durations_h=tuple(float(h) for h in raw["sensitivity"]["durations_h"]),
     )
     if not params.trend_start <= params.start <= params.end:
         raise ValueError(f"{path.name}: need trend_start <= start <= end")
@@ -66,6 +70,8 @@ def load_params(path: Path = PARAMS_FILE) -> Params:
         raise ValueError(f"{path.name}: power_mw and energy_mwh must be positive")
     if not (0 < params.round_trip_efficiency <= 1 and 0 < params.availability <= 1):
         raise ValueError(f"{path.name}: round_trip_efficiency and availability must be in (0, 1]")
+    if any(h <= 0 for h in params.durations_h):
+        raise ValueError(f"{path.name} [sensitivity] durations_h: hours must be positive")
     return params
 
 

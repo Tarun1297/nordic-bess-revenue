@@ -112,11 +112,12 @@ def transform_raw(with_day_ahead: bool) -> pd.DataFrame:
     return prices
 
 
-def compute_revenue(params: config.Params, with_day_ahead: bool) -> pd.DataFrame:
-    """Build data/clean/revenue_daily.parquet: EUR per market day for each strategy."""
+def strategy_days(
+    prices: pd.DataFrame, params: config.Params, with_day_ahead: bool
+) -> pd.DataFrame:
+    """EUR per market day for each strategy and the daily best-of, from the tidy price table."""
     fcr_n_mw, fcr_d_mw = revenue.max_fcr_bids(params.power_mw, params.energy_mwh)
     log.info("compliant bids: FCR-N %.3f MW, FCR-D up+down %.3f MW each", fcr_n_mw, fcr_d_mw)
-    prices = pd.read_parquet(config.DATA_CLEAN / "prices.parquet")
     is_da = prices["product"] == config.DAY_AHEAD
     wide = revenue.to_wide(prices[~is_da])
     # The index is CET, so date strings select whole market days directly.
@@ -133,7 +134,7 @@ def compute_revenue(params: config.Params, with_day_ahead: bool) -> pd.DataFrame
         )
         # Mixed day: FCR-D in all hours but one charge and one sell hour, with the trade sized
         # so FCR-D keeps its Table 10 energy reserve throughout.
-        trade_mwh = revenue.trade_room_mwh(params.energy_mwh, fcr_d_mw)
+        trade_mwh = revenue.trade_room_mwh(params.energy_mwh, params.power_mw, fcr_d_mw)
         log.info("FCR-D plus one trade: %.3f MWh traded per day", trade_mwh)
         mixed = revenue.fcr_d_plus_trade(
             hourly["fcr_d_stacked"],
@@ -151,12 +152,31 @@ def compute_revenue(params: config.Params, with_day_ahead: bool) -> pd.DataFrame
     else:
         log.info("ENTSOE_API_KEY not set: day-ahead arbitrage skipped")
     # Availability scales every strategy equally: an unavailable hour earns nothing anywhere.
-    days = revenue.best_of(days * params.availability)
+    return revenue.best_of(days * params.availability)
+
+
+def compute_revenue(params: config.Params, with_day_ahead: bool) -> pd.DataFrame:
+    """Build data/clean/revenue_daily.parquet: EUR per market day for each strategy."""
+    prices = pd.read_parquet(config.DATA_CLEAN / "prices.parquet")
+    days = strategy_days(prices, params, with_day_ahead)
     days.to_parquet(config.DATA_CLEAN / "revenue_daily.parquet")
     headline = days.loc[str(params.start) : str(params.end)]
     for strategy, eur in revenue.annualised(headline, params.power_mw).items():
         log.info("headline %-14s %10.0f EUR/MW/year", strategy, eur)
     return days
+
+
+def duration_sensitivity(
+    prices: pd.DataFrame, params: config.Params, with_day_ahead: bool
+) -> dict[str, dict[str, int]]:
+    """Headline EUR/MW/year per strategy for each duration in params, at the same power."""
+    out = {}
+    for hours in params.durations_h:
+        p = dataclasses.replace(params, energy_mwh=params.power_mw * hours)
+        days = strategy_days(prices, p, with_day_ahead).loc[str(p.start) : str(p.end)]
+        annual = revenue.annualised(days, p.power_mw)
+        out[f"{hours:g}h"] = {str(k): round(v) for k, v in annual.items()}
+    return out
 
 
 def timed[T](name: str, step: Callable[[], T]) -> T:
@@ -193,7 +213,8 @@ def main() -> None:
     quality = timed("validate", partial(validate_raw, params, with_da))
     prices = timed("transform", partial(transform_raw, with_da))
     days = timed("revenue", partial(compute_revenue, params, with_da))
-    timed("report", partial(report.write_outputs, days, prices, params, quality))
+    durations = timed("durations", partial(duration_sensitivity, prices, params, with_da))
+    timed("report", partial(report.write_outputs, days, prices, params, quality, durations))
 
 
 if __name__ == "__main__":

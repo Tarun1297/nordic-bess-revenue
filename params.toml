@@ -29,3 +29,10 @@ round_trip_efficiency = 0.88
 # 100 % availability: the brief's simplification, so results show the market's potential.
 # Real plants lose hours to maintenance and outages; set e.g. 0.97 for a scenario.
 availability = 1.0
+
+[sensitivity]
+# Battery durations also run for the headline period, at the same power. New projects choose
+# their duration, and Fingrid's rules cap FCR bids by stored energy, so this shows how much a
+# longer battery adds in each strategy. 1 h repeats the headline; 2 h and 4 h are the next
+# common sizes.
+durations_h = [1.0, 2.0, 4.0]

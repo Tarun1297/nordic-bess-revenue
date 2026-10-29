@@ -16,6 +16,9 @@ power_mw = 2
 energy_mwh = 4.0
 round_trip_efficiency = 0.9
 availability = 0.97
+
+[sensitivity]
+durations_h = [1, 2.5]
 """
 
 
@@ -34,6 +37,7 @@ def test_valid_file_parses_dates_and_floats(tmp_path: Path) -> None:
     p = config.load_params(write(tmp_path, VALID))
     assert p.start == date(2025, 10, 1) and p.trend_start == date(2022, 10, 1)
     assert p.power_mw == 2.0 and isinstance(p.power_mw, float)
+    assert p.durations_h == (1.0, 2.5)
 
 
 def test_typo_in_key_is_rejected(tmp_path: Path) -> None:
@@ -50,6 +54,7 @@ def test_typo_in_key_is_rejected(tmp_path: Path) -> None:
         ("energy_mwh = 4.0", "energy_mwh = 0"),
         ("availability = 0.97", "availability = 1.2"),
         ("round_trip_efficiency = 0.9", "round_trip_efficiency = 0"),
+        ("durations_h = [1, 2.5]", "durations_h = [1, 0]"),
     ],
 )
 def test_invalid_values_are_rejected(tmp_path: Path, old: str, new: str) -> None:

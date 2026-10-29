@@ -486,5 +486,28 @@
       "2026-08": 43584,
       "2026-09": 59022
     }
+  },
+  "duration_sensitivity_eur_per_mw_year": {
+    "1h": {
+      "fcr_n": 39831,
+      "fcr_d_stacked": 53215,
+      "arbitrage": 21038,
+      "fcr_d_plus_trade": 58454,
+      "best_of": 61273
+    },
+    "2h": {
+      "fcr_n": 59450,
+      "fcr_d_stacked": 53215,
+      "arbitrage": 38576,
+      "fcr_d_plus_trade": 68662,
+      "best_of": 77086
+    },
+    "4h": {
+      "fcr_n": 59450,
+      "fcr_d_stacked": 53215,
+      "arbitrage": 66055,
+      "fcr_d_plus_trade": 68662,
+      "best_of": 90275
+    }
   }
 }

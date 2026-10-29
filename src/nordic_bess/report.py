@@ -185,7 +185,9 @@ def build_summary(
         },
         "bids_mw": {"fcr_n": round(fcr_n_mw, 3), "fcr_d_up_and_down_each": round(fcr_d_mw, 3)},
         # Energy the FCR-D + one trade strategy can trade while keeping FCR-D's energy reserve.
-        "fcr_d_plus_trade_mwh": round(revenue.trade_room_mwh(params.energy_mwh, fcr_d_mw), 3),
+        "fcr_d_plus_trade_mwh": round(
+            revenue.trade_room_mwh(params.energy_mwh, params.power_mw, fcr_d_mw), 3
+        ),
         "annualised_eur_per_mw_year": {k: _eur(v) for k, v in annual.items()},
         # What the same prices would pay if the full nameplate MW could be bid (rules ignored).
         "nameplate_bid_sensitivity_eur_per_mw_year": {
@@ -473,6 +475,7 @@ def write_outputs(
     prices: pd.DataFrame,
     params: config.Params,
     quality: dict[str, list[validate.CheckResult]],
+    durations: dict[str, dict[str, int]] | None = None,
     out_dir: Path = config.DATA_OUTPUT,
 ) -> dict[str, Any]:
     """Write the monthly and quarterly CSVs, summary.json and the charts; return the summary."""
@@ -481,7 +484,9 @@ def write_outputs(
     monthly_table(days, params.power_mw).to_csv(out_dir / "monthly_revenue.csv", index=False)
     quarterly_table(days, params.power_mw).to_csv(out_dir / "quarterly_revenue.csv", index=False)
     summary = build_summary(days, params, quality) | {
-        "public_benchmarks": public_benchmarks(days, prices, params)
+        "public_benchmarks": public_benchmarks(days, prices, params),
+        # Same headline period and power, different hours of energy (params [sensitivity]).
+        "duration_sensitivity_eur_per_mw_year": durations or {},
     }
     # Stable key order and no generation timestamp, so re-runs on the same inputs diff clean.
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
