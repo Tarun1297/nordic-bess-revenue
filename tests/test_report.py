@@ -92,3 +92,16 @@ def test_write_outputs_creates_every_file(tmp_path: Path) -> None:
     charts = ("monthly_revenue.png", "quarterly_revenue.png", "price_distribution.png")
     for name in (*charts, "daily_price_profile.png"):
         assert (tmp_path / "charts" / name).stat().st_size > 10_000
+
+
+def test_public_benchmarks_are_hand_checkable() -> None:
+    # Two days of day-ahead prices: day 1 spans 10..30 (spread 20), day 2 spans 0..60 (spread 60).
+    ts = pd.date_range("2023-01-01", periods=4, freq="12h", tz=config.MARKET_TZ)
+    prices = pd.DataFrame(
+        {"timestamp_cet": ts, "product": config.DAY_AHEAD, "price": [10.0, 30.0, 0.0, 60.0]}
+    )
+    b = report.public_benchmarks(two_years(), prices, PARAMS)
+    assert b["mean_price_by_year"] == {"2023": {config.DAY_AHEAD: 25.0}}
+    assert b["day_ahead_mean_daily_spread_eur_per_mwh"] == 40.0
+    # 2022 best-of is FCR-D at 20 EUR a day: 20 x 365 whatever the month length.
+    assert b["best_of_month_annualised_eur_per_mw_year"]["2022-02"] == 7300

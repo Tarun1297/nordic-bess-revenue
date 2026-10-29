@@ -24,6 +24,7 @@ def _numbers(node: Any) -> set[str]:
 def test_readme_euro_figures_all_come_from_summary() -> None:
     # Definition of done: README numbers match summary.json exactly. Every thousands-separated
     # figure in the README (the EUR amounts) must exist in summary.json, so a stale README fails.
+    # Published figures from other sources are written as "645k", so they are not caught here.
     in_readme = set(re.findall(r"\b\d{1,3}(?:,\d{3})+\b", README))
     assert in_readme, "README has no EUR figures to check"
     assert in_readme <= _numbers(SUMMARY), f"not in summary.json: {in_readme - _numbers(SUMMARY)}"
@@ -37,3 +38,17 @@ def test_readme_percentages_match_summary() -> None:
     assert f"{change['fcr_n']:g}%" in README
     assert f"**{SUMMARY['bids_mw']['fcr_n']:g} MW**" in README
     assert f"**{SUMMARY['bids_mw']['fcr_d_up_and_down_each']:g} MW**" in README
+
+
+def test_readme_cross_check_uses_summary_values() -> None:
+    # Our column of the cross-check table must be the pipeline's own numbers.
+    pb = SUMMARY["public_benchmarks"]
+    years = pb["mean_price_by_year"]
+    for cell in [
+        years["2023"]["day_ahead"],
+        years["2024"]["day_ahead"],
+        years["2025"]["day_ahead"],
+        years["2024"]["fcr_n"],
+        pb["day_ahead_mean_daily_spread_eur_per_mwh"],
+    ]:
+        assert f"| {cell:g} |" in README

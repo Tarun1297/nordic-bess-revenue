@@ -109,6 +109,31 @@ def first_quarter_fcr_n_led(quarters: pd.DataFrame) -> str | None:
     return None if led.empty else str(led["quarter_cet"].iloc[0])
 
 
+def public_benchmarks(
+    days: pd.DataFrame, prices: pd.DataFrame, params: config.Params
+) -> dict[str, Any]:
+    """Our side of the figures that public sources also publish, for the README cross-check."""
+    ts = prices["timestamp_cet"]
+    trend = prices[ts.dt.date >= params.trend_start]
+    means = trend.groupby([trend["timestamp_cet"].dt.year, "product"])["price"].mean().round(1)
+    da = prices[(prices["product"] == config.DAY_AHEAD) & (ts.dt.date >= params.start)]
+    da = da[da["timestamp_cet"].dt.date <= params.end]
+    daily_range = da.groupby(da["timestamp_cet"].dt.date)["price"].agg(["max", "min"])
+    # Indices such as Clean Horizon's report each month scaled to a year; do the same here.
+    best = revenue.monthly(days[["best_of"]], params.power_mw)["best_of"]
+    n_days = pd.Series(1, index=days.index).groupby(pd.DatetimeIndex(days.index).to_period("M"))
+    return {
+        "mean_price_by_year": {str(y): g.droplevel(0).to_dict() for y, g in means.groupby(level=0)},
+        # None without an ENTSO-E key: no day-ahead prices, so no spread (NaN is not valid JSON).
+        "day_ahead_mean_daily_spread_eur_per_mwh": None
+        if daily_range.empty
+        else round(float((daily_range["max"] - daily_range["min"]).mean()), 1),
+        "best_of_month_annualised_eur_per_mw_year": {
+            str(m): _eur(v) for m, v in (best / n_days.sum() * 365).items()
+        },
+    }
+
+
 def _ytd_mask(index: pd.DatetimeIndex, end: date) -> Any:
     """Days whose (month, day) is on or before end's, in any year: a like-for-like YTD window."""
     return (index.month < end.month) | ((index.month == end.month) & (index.day <= end.day))
@@ -455,7 +480,9 @@ def write_outputs(
     charts.mkdir(parents=True, exist_ok=True)
     monthly_table(days, params.power_mw).to_csv(out_dir / "monthly_revenue.csv", index=False)
     quarterly_table(days, params.power_mw).to_csv(out_dir / "quarterly_revenue.csv", index=False)
-    summary = build_summary(days, params, quality)
+    summary = build_summary(days, params, quality) | {
+        "public_benchmarks": public_benchmarks(days, prices, params)
+    }
     # Stable key order and no generation timestamp, so re-runs on the same inputs diff clean.
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
     ts = prices["timestamp_cet"]

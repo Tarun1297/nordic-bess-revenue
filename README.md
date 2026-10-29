@@ -105,6 +105,25 @@ revenue (EUR) = 0.88 MWh × average sell price − 1 MWh × average buy price
 
 Independent sources describe the same shift. [Olana](https://olana.fi/blog-posts/the-merchant-bess-business-case) (May 2026) says reserve revenues have peaked and energy-market revenues are rising. [Solarplaza](https://www.solarplaza.com/resource/13522/article-finlands-bess-market-beyond-the-gold-rush-2026/) (July 2026) reports about 1.5 GW of batteries built in Finland in a couple of years, and calls the reserve market "quite saturated". [RaboResearch](https://www.rabobank.com/knowledge/d011535313-backup-power-for-europe-part-8-ranking-bess-market-attractivity-in-the-nordics) (July 2026) sees value moving from FCR and FFR to the deeper aFRR and mFRR markets, and reports Finnish day-ahead spreads averaging above 90 EUR/MWh.
 
+### Cross-check against public sources
+
+Our side of each comparison is in `public_benchmarks` in [summary.json](data/output/summary.json). Published figures are written as "k", so they are not confused with ours.
+
+| What | Ours | Published | Verdict |
+|---|---|---|---|
+| Day-ahead mean, 2023 (EUR/MWh) | 56.5 | 56.5 ([Finnish Energy](https://energia.fi/wp-content/uploads/2024/01/Electricity-price-statistics-2023.pdf)) | Match |
+| Day-ahead mean, 2024 | 45.6 | 45.8 ([euenergy.live](https://euenergy.live/finland/2024)), 46.1 ([Electricity Maps](https://www.electricitymaps.com/grid-in-review-2025/finland)) | Match |
+| Day-ahead mean, 2025 | 42.1 | 40.8 ([Electricity Maps](https://www.electricitymaps.com/grid-in-review-2025/finland)) | Close: they average daily prices, and Q4 2025 used 15-minute prices |
+| Day-ahead mean daily spread, last 12 months | 89.6 | "above 90" ([RaboResearch](https://www.rabobank.com/knowledge/d011535313-backup-power-for-europe-part-8-ranking-bess-market-attractivity-in-the-nordics)) | Match |
+| FCR-N mean price, 2024 (EUR/MW/h) | 45.8 | 46 ([Clean Horizon](https://www.cleanhorizon.com/news/finland-price-forecast-s1-2025-updated/)) | Match |
+| 1-hour battery, Sep 2023, scaled to a year (EUR/MW/year) | 632,182 | 645k ([Clean Horizon Storage Index](https://www.cleanhorizon.com/news/storage-index-update-finland-in-focus/)) | Within 2% |
+| 1-hour battery, Aug 2026, scaled to a year | 43,584 | 50k (Clean Horizon Storage Index) | Ours lower, as expected: aFRR, mFRR and intraday are not modelled |
+
+Two differences are not resolved:
+
+- Clean Horizon names September 2023 as the peak. Our highest month is October 2022 (680,199 EUR/MW/year scaled). Their index may start later than our data; we have not confirmed this.
+- [Gridcog](https://www.gridcog.com/blog/nordic-power-markets-battery-storage-opportunity) reports FCR-D averaging below 3 EUR/MW/h by February 2025. Fingrid's own hourly prices for that month average well above that in both directions. We use Fingrid's data and have not found what Gridcog measured.
+
 ## How to run
 
 Requires Windows, macOS or Linux, [uv](https://docs.astral.sh/uv/), a free [Fingrid API key](https://developer-data.fingrid.fi/) (Products → Open Data starter → Subscribe, then Profile → Primary key) and, for arbitrage, a free [ENTSO-E token](https://transparencyplatform.zendesk.com/hc/en-us/articles/12845911031188-How-to-get-security-token). Without the ENTSO-E token the pipeline still runs and skips arbitrage.
