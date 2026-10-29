@@ -9,7 +9,7 @@
 ## Key findings
 
 - **FCR-D, with one trade on top, is the main revenue stream for a 1-hour battery.** Each day's best strategy: FCR-D + one trade on 224 of 365 days, FCR-D alone on 77, FCR-N on 62 and pure arbitrage on 2.
-- **Fingrid's battery rules decide the ranking.** A 1 MWh battery may bid only **0.5 MW** into FCR-N but **0.833 MW** into each FCR-D direction. If the full 1 MW could be bid, FCR-N would lead with 79,663 against FCR-D's 63,858. A 2-hour battery can bid more FCR-N, and the ranking flips back. To check, set `energy_mwh = 2.0` in [params.toml](params.toml) and re-run.
+- **Fingrid's battery rules decide the ranking.** A 1 MWh battery may bid only **0.5 MW** into FCR-N but **0.833 MW** into each FCR-D direction. If the full 1 MW could be bid, FCR-N would lead with 79,663 against FCR-D's 63,858. A 2-hour battery can bid more FCR-N, and the ranking flips back: 59,450 for FCR-N against 53,215 for FCR-D (see `duration_sensitivity_eur_per_mw_year` in [summary.json](data/output/summary.json)).
 - **Reserve revenue is collapsing; trading revenue is not.** Annualised by calendar year, in EUR per MW:
 
   | Year | FCR-N | FCR-D up + down | Day-ahead arbitrage | FCR-D + one trade | Daily best-of |
@@ -55,7 +55,15 @@ These numbers show where the money **is** in the market, not what a real project
 
 ## What this means for new Nordic projects
 
-*Author's section, to be written.*
+My reading of the results. Each point gives the evidence first, then what I take from it. The data is Finland's; Sweden, Norway and Denmark share the same FCR rules but have their own prices.
+
+1. **Don't build the business case on FCR.** Reserve income in Finland has fallen fast and has not clearly stopped falling. FCR-D earned 143,277 EUR/MW in Q3 2023 and 10,007 in Q3 2026, and dropped another 42.5% within the last 12 months. A project that needs FCR prices to recover is betting against a market that more batteries keep joining.
+
+2. **The value is in combining products and switching between them.** FCR-D with one daily trade was the best strategy on 224 of 365 days, and in Q3 2026 FCR-N overtook FCR-D for the first time. Which product pays best now changes from quarter to quarter. An operator that mixes products within a day, and moves between them as prices shift, earns more than one that commits to a single product: the optimiser matters as much as the battery.
+
+3. **Choose the battery's duration for trading, not for reserves.** At the same 1 MW, going from 1 to 4 hours of storage lifts the daily best-of from 61,273 to 90,275 EUR/MW. None of that gain comes from FCR-D, which is capped by power and stays at 53,215. FCR-N rises once, to 59,450 at 2 hours; arbitrage grows with every hour. Per MWh of storage, the best-of falls from 61,273 at 1 hour to 38,543 at 2 hours and 22,569 at 4 hours. On these numbers a 2-hour battery is the balanced choice: it gets the largest FCR-N bid the rules allow and far more trading, while losing less per MWh than a 4-hour one. Whether 4 hours pays depends on battery cost per MWh and on trading more than once a day, and this model covers neither.
+
+4. **The open questions are the rules and the markets not modelled here.** Fingrid's Table 10 halves a 1-hour battery's FCR-N bid: 39,831 EUR/MW against 79,663 if the full 1 MW could be bid. The [Nordic FCR Technical Requirements](https://www.fingrid.fi/globalassets/dokumentit/fi/sahkomarkkinat/reservit/technical-requirements-for-frequency-containment-reserve-provision-in-the-nordic-synchronous-area_14.5.2025.pdf) note that the FCR-N energy requirement is reviewed and may move to 1–1.5 hours, which would change which battery sizes pay. The next step for this benchmark is aFRR, mFRR and intraday trading, where RaboResearch sees value moving (see [Market context](#market-context)). I have not modelled them, so I make no claim about their size.
 
 ## How a battery makes money
 

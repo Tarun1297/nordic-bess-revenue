@@ -176,6 +176,8 @@ def duration_sensitivity(
         days = strategy_days(prices, p, with_day_ahead).loc[str(p.start) : str(p.end)]
         annual = revenue.annualised(days, p.power_mw)
         out[f"{hours:g}h"] = {str(k): round(v) for k, v in annual.items()}
+        # Storage cost grows with MWh, so per-MWh revenue shows what each extra hour adds.
+        out[f"{hours:g}h"]["best_of_per_mwh"] = round(annual["best_of"] / hours)
     return out
 
 

@@ -493,21 +493,24 @@
       "fcr_d_stacked": 53215,
       "arbitrage": 21038,
       "fcr_d_plus_trade": 58454,
-      "best_of": 61273
+      "best_of": 61273,
+      "best_of_per_mwh": 61273
     },
     "2h": {
       "fcr_n": 59450,
       "fcr_d_stacked": 53215,
       "arbitrage": 38576,
       "fcr_d_plus_trade": 68662,
-      "best_of": 77086
+      "best_of": 77086,
+      "best_of_per_mwh": 38543
     },
     "4h": {
       "fcr_n": 59450,
       "fcr_d_stacked": 53215,
       "arbitrage": 66055,
       "fcr_d_plus_trade": 68662,
-      "best_of": 90275
+      "best_of": 90275,
+      "best_of_per_mwh": 22569
     }
   }
 }
