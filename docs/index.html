@@ -5,17 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Finland BESS revenue</title>
 <meta name="description" content="Where a 1 MW / 1 MWh battery in Finland earns its money, and how that changed: FCR-N, FCR-D and day-ahead trading, 2022 to 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
   :root {
     color-scheme: light;
-    --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --font-anthropic-serif: Georgia, "Times New Roman", serif;
-    --color-bg: #ffffff; --color-panel: #f7f6f3; --color-fg: #1f1e1c; --color-fg-muted: #64625d;
-    --color-border-line: #e2e0db; --color-ok: #1a7f37; --color-bad: #c42b1c;
-    --cds-border: #d6d3cc; --cds-surface-popover: #ffffff; --cds-text-secondary: #64625d;
+    /* Editorial look: serif display headings, DM Sans text, neutral greys, muted navy accent. */
+    --font-anthropic-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-anthropic-serif: "DM Serif Display", Georgia, serif;
+    --accent: #2d3a5c;
+    --color-bg: #ffffff; --color-panel: #f6f6f6; --color-fg: #131615; --color-fg-muted: #6f6f6f;
+    --color-border-line: #e4e4ea; --color-ok: #1a7f37; --color-bad: #c42b1c;
+    --cds-border: #cdcdde; --cds-surface-popover: #ffffff; --cds-text-secondary: #6f6f6f;
     --cds-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --cds-chart-axis: #b9b6af; --cds-chart-grid: #ebe9e4; --cds-chart-muted: #9a978f; --cds-chart-reference: #8a877f;
+    --cds-chart-axis: #b4b4bd; --cds-chart-grid: #ececf0; --cds-chart-muted: #929292; --cds-chart-reference: #646e90;
     --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 36px;
     --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 18px;
     --cds-radius: 8px; --cds-dur-slow: 300ms; --cds-font-weight-medium: 600;
@@ -24,13 +29,20 @@
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
-      --color-bg: #1b1a19; --color-panel: #252422; --color-fg: #ecebe8; --color-fg-muted: #a5a39d;
-      --color-border-line: #3a3936; --color-ok: #4ac26b; --color-bad: #f47067;
-      --cds-border: #4a4844; --cds-surface-popover: #2c2b29; --cds-text-secondary: #a5a39d;
-      --cds-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.5);
-      --cds-chart-axis: #5d5b56; --cds-chart-grid: #33322f; --cds-chart-muted: #8c8a84; --cds-chart-reference: #9a978f;
+      --accent: #cdcdde;
+      --color-bg: #0b0b0b; --color-panel: #1a1a1a; --color-fg: #ececec; --color-fg-muted: #9d9ea0;
+      --color-border-line: #2e2e2e; --color-ok: #4ac26b; --color-bad: #f47067;
+      --cds-border: #3a3a3a; --cds-surface-popover: #232323; --cds-text-secondary: #9d9ea0;
+      --cds-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.6);
+      --cds-chart-axis: #4a4a4a; --cds-chart-grid: #262626; --cds-chart-muted: #929292; --cds-chart-reference: #828cad;
     }
   }
+  /* Scoped under #dash-root so these win over the page's own rules, which load later. */
+  #dash-root .bx-title { font-size: 40px; line-height: 1.1; letter-spacing: -0.01em; }
+  #dash-root .bx-tab[aria-selected="true"] { border-bottom-color: var(--accent); }
+  #dash-root :is(.bx-kpi, .bx-card, .hw-fig, .hw-card, .hw-result, .hw-example) { border-radius: 12px; }
+  #dash-root .hw-callout { border-left-color: var(--accent); }
+  .sa-foot a { color: var(--color-fg); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); }
   #dash-root { max-width: 72rem; margin: 0 auto; padding: 24px 16px 48px; }
