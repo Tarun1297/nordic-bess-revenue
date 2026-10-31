@@ -39,7 +39,9 @@ def check_timestamps_utc(df: pd.DataFrame) -> CheckResult:
         # marker: a different offset means the source changed and needs a human look.
         bad |= parsed.isna() | ~text.str.endswith(UTC_SUFFIXES)
     n = int(bad.sum())
-    detail = "all timestamps are explicit UTC" if n == 0 else f"first bad: {df.loc[bad].iloc[0, 1]}"
+    # !r shows the raw value, quoted; newer pandas-stubs also reject a plain f"{}" here.
+    first = df.loc[bad].iloc[0, 1] if n else None
+    detail = "all timestamps are explicit UTC" if n == 0 else f"first bad: {first!r}"
     return CheckResult("timestamps_utc", n == 0, n, detail, critical=True)
 
 

@@ -23,8 +23,9 @@ entsoe = ["entsoe-py>=0.8.1,<0.9"]  # 0.8.x: 15-minute SDAC handling this code r
 dev = [
     "pytest>=8",
     "ruff==0.17.2",  # pinned to the pre-commit rev so local, hook and CI formatting agree
-    "mypy>=1.10",
-    "pandas-stubs>=2.2",
+    # Type tools pinned like ruff: a new stubs release once failed CI on unchanged code.
+    "mypy==2.4.1",
+    "pandas-stubs==3.1.0.261029",
     "types-requests>=2.31",
     "pre-commit>=3.7",
 ]
