@@ -42,6 +42,8 @@
   #dash-root .bx-tab[aria-selected="true"] { border-bottom-color: var(--accent); }
   #dash-root :is(.bx-kpi, .bx-card, .hw-fig, .hw-card, .hw-result, .hw-example) { border-radius: 12px; }
   #dash-root .hw-callout { border-left-color: var(--accent); }
+  #dash-root .bx-by { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  #dash-root .bx-by a { color: var(--color-fg); text-underline-offset: 3px; }
   .sa-foot a { color: var(--color-fg); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); }
@@ -208,6 +210,7 @@ window.dash = (() => {
 <div class="bx">
   <header class="bx-head">
     <h1 class="bx-title" id="top">Finland BESS revenue</h1>
+    <p class="bx-by">By Tarun Dang · <a href="https://github.com/Tarun1297/nordic-bess-revenue" target="_blank" rel="noopener">Code on GitHub</a></p>
     <p class="bx-take" id="takeaway">
       In <span data-source="headline" data-field="window" data-where="strategy=fcr_d_stacked" class="dash-skeleton">—</span>,
       a <span data-source="assumptions" data-field="value" data-where="key=power_mw">—</span> MW / <span data-source="assumptions" data-field="value" data-where="key=energy_mwh">—</span> MWh battery earned most from FCR-D up + down with one daily trade on top:
